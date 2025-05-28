@@ -1,0 +1,13 @@
+#pragma once
+#include "IScene.h"
+//---------------------------------
+//ISceneÇåpè≥ÇµÇΩGameScene
+//---------------------------------
+class GameScene : public IScene
+{
+	explicit GameScene() {};
+	void Update(uint64_t deltatime) override;
+	void Draw(uint64_t deltatime) override;
+	void Init() override;
+	void Uninit() override;
+};
