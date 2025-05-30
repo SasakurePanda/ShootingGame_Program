@@ -31,9 +31,9 @@ void SceneManager::Init()
     //-------------------------------------------------------------
     RegisterScene("TitleScene", std::make_unique<TitleScene>());
     m_scenes["TitleScene"]->Init();
-    RegisterScene("TestScene", std::make_unique<TestScene>());
-    m_scenes["TitleScene"]->Init();
-    
+    //RegisterScene("TestScene", std::make_unique<TestScene>());
+    //m_scenes["TestScene"]->Init();
+    //
     //‰ŠúƒV[ƒ“‚ÉTitleScene‚ğİ’è
     m_currentSceneName = "TitleScene";
 }

@@ -1,4 +1,6 @@
 #include "Application.h"
+#include "renderer.h"
+#include <chrono>
 
 constexpr auto ClassName  = TEXT("2025 就職作品 中江文瞳");         //ウィンドウクラス名.
 constexpr auto WindowName = TEXT("2025 就職作品 中江文瞳");        //ウィンドウ名.
@@ -11,7 +13,7 @@ HWND       Application::m_hWnd;         //ウィンドウハンドルです.
 uint32_t   Application::m_Width;        //ウィンドウの横幅です.
 uint32_t   Application::m_Height;       //ウィンドウの縦幅です.
 
-// ImGuiのWin32プロシージャハンドラ(マウス対応)
+//ImGuiのWin32プロシージャハンドラ(マウス対応)
 //extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 void Application::Run()
@@ -38,32 +40,42 @@ bool Application::InitApp()
 
 void Application::UninitApp()
 {
-    UninitWnd();
+    Game::GameUninit(); // ゲームの後処理
+    Renderer::Uninit(); // DirectXのリソース解放
+    UninitWnd(); // ウィンドウの後処理
 }
 
 void Application::MainLoop()
 {
-        MSG msg = {};
+    MSG msg = {};
 
-        // ゲームの初期処理
-        Game::GameInit();
+    // ゲームの初期化
+    Game::GameInit();
 
-        while (WM_QUIT != msg.message)//windowの閉じる処理が入っていない間
+    // メインループ
+    auto previousTime = std::chrono::steady_clock::now();
+    while (msg.message != WM_QUIT)
+    {
+        if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
-            if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) == TRUE)//メッセージキュー内で何かイベントが発生した場合
-            {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-            }
-            else
-            {
-                //Gameクラスのゲームループに入る
-                Game::GameLoop();
-            }
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
         }
+        else
+        {
+            // ΔTime計算
+            auto currentTime = std::chrono::steady_clock::now();
+            uint64_t deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - previousTime).count();
+            previousTime = currentTime;
 
-        // ゲームの終了処理
-        Game::GameUninit();
+            // 毎フレームの更新・描画
+            Game::GameUpdate(deltaTime);
+            Game::GameDraw(deltaTime);
+        }
+    }
+
+    // ゲーム終了処理
+    Game::GameUninit();
 }
 
 bool Application::InitWnd()
@@ -81,7 +93,7 @@ bool Application::InitWnd()
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WndProc;
     wc.hIcon = LoadIcon(hInst, IDI_APPLICATION);  //エグゼのアイコンの見た目を変えられる
-    wc.hCursor = LoadCursor(hInst, IDC_CROSS);    //カーソルの見た目を変えられる
+    wc.hCursor = LoadCursor(hInst, IDC_ARROW);    //カーソルの見た目を変えられる
     //wcex.hCursor =		   //NULL,カーソルの画像パス,
     //	(HCURSOR)LoadImage(NULL, "path_to_cursor_file.cur", 
     //					   //ロードする画像の種類,幅の設定(0はデフォ),ロード方法

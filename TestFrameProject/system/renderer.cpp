@@ -8,7 +8,7 @@
 
 #include <stdexcept>
 #include "renderer.h"
-#include "Application.h"
+#include "../Application.h"
 
 //------------------------------------------------------------------------------
 // スタティックメンバ変数の初期化
@@ -69,10 +69,6 @@ void Renderer::Init()
         m_Device.GetAddressOf(),
         &m_FeatureLevel,
         m_DeviceContext.GetAddressOf());
-    if (FAILED(hr))
-    {
-        OutputDebugStringA("DirectXの初期化に失敗しました。\n");
-    }
 
     ComPtr<ID3D11Texture2D> renderTarget;
     hr = m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(renderTarget.GetAddressOf()));
@@ -220,8 +216,7 @@ void Renderer::Init()
  */
 void Renderer::Uninit()
 {
-    for (auto& bs : m_BlendState)
-    {
+    for (auto& bs : m_BlendState) {
         bs.Reset();
     }
     m_BlendStateATC.Reset();

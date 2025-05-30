@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{375bb0b9-3262-43e1-ba53-c72c021ca46f}</ProjectGuid>
-    <RootNamespace>ShootingGame0519</RootNamespace>
+    <ProjectGuid>{8ae689c0-59b0-4f59-809b-f24084297bac}</ProjectGuid>
+    <RootNamespace>TestFrameProject</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -134,29 +134,34 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
-    <ClCompile Include="Game.cpp" />
-    <ClCompile Include="GameScene.cpp" />
+    <ClCompile Include="game.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Primitive.cpp" />
-    <ClCompile Include="renderer.cpp" />
-    <ClCompile Include="SceneManager.cpp" />
-    <ClCompile Include="TestScene.cpp" />
-    <ClCompile Include="TitlrScene.cpp" />
+    <ClCompile Include="system\imgui\imgui.cpp" />
+    <ClCompile Include="system\imgui\imgui_demo.cpp" />
+    <ClCompile Include="system\imgui\imgui_draw.cpp" />
+    <ClCompile Include="system\imgui\imgui_impl_dx11.cpp" />
+    <ClCompile Include="system\imgui\imgui_impl_win32.cpp" />
+    <ClCompile Include="system\imgui\imgui_tables.cpp" />
+    <ClCompile Include="system\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="system\renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />
-    <ClInclude Include="commontypes.h" />
-    <ClInclude Include="Game.h" />
-    <ClInclude Include="GameScene.h" />
-    <ClInclude Include="IScene.h" />
+    <ClInclude Include="fpscontrol.h" />
+    <ClInclude Include="game.h" />
     <ClInclude Include="main.h" />
-    <ClInclude Include="NonCopyable.h" />
-    <ClInclude Include="Primitive.h" />
-    <ClInclude Include="renderer.h" />
-    <ClInclude Include="SceneManager.h" />
-    <ClInclude Include="TestScene.h" />
-    <ClInclude Include="TitleScene.h" />
-    <ClInclude Include="transform.h" />
+    <ClInclude Include="system\commontypes.h" />
+    <ClInclude Include="system\imgui\imconfig.h" />
+    <ClInclude Include="system\imgui\imgui.h" />
+    <ClInclude Include="system\imgui\imgui_impl_dx11.h" />
+    <ClInclude Include="system\imgui\imgui_impl_win32.h" />
+    <ClInclude Include="system\imgui\imgui_internal.h" />
+    <ClInclude Include="system\imgui\imstb_rectpack.h" />
+    <ClInclude Include="system\imgui\imstb_textedit.h" />
+    <ClInclude Include="system\imgui\imstb_truetype.h" />
+    <ClInclude Include="system\noncopyable.h" />
+    <ClInclude Include="system\renderer.h" />
+    <ClInclude Include="system\transform.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
