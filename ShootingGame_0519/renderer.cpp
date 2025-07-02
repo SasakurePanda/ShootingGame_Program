@@ -56,12 +56,15 @@ void Renderer::Init()
 {
     HRESULT hr = S_OK;
 
+    //スワップチェインを作成する
     DXGI_SWAP_CHAIN_DESC swapChainDesc{};
-    swapChainDesc.BufferCount = 1;
+
+    //------------------------------スワップチェインの構造体の中に色々設定------------------------------
+    swapChainDesc.BufferCount = 1;//countは1なのでダブルバッファです
     swapChainDesc.BufferDesc.Width = Application::GetWidth();
     swapChainDesc.BufferDesc.Height = Application::GetHeight();
-    swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
+    swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; //1ピクセルを構成するビット
+    swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;    //更新頻度
     swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.OutputWindow = Application::GetWindow();
@@ -69,6 +72,7 @@ void Renderer::Init()
     swapChainDesc.SampleDesc.Quality = 0;
     swapChainDesc.Windowed = TRUE;
 
+    //-----------------Direct3D デバイス・スワップチェーン・デバイスコンテキストをを作成する-----------------
     hr = D3D11CreateDeviceAndSwapChain(
         nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
         nullptr, 0, D3D11_SDK_VERSION, &swapChainDesc,
@@ -81,15 +85,18 @@ void Renderer::Init()
         OutputDebugStringA("DirectXの初期化に失敗しました。\n");
     }
 
+    //-----------------Direct3D デバイス・スワップチェーン・デバイスコンテキストをを作成する-----------------
     ComPtr<ID3D11Texture2D> renderTarget;
     hr = m_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(renderTarget.GetAddressOf()));
     if (SUCCEEDED(hr) && renderTarget) {
         m_Device->CreateRenderTargetView(renderTarget.Get(), nullptr, m_RenderTargetView.GetAddressOf());
     }
-    else {
+    else 
+    {
         throw std::runtime_error("Failed to retrieve render target buffer.");
     }
 
+    //----------------------------深度ステンシルバッファ---------------------------
     ComPtr<ID3D11Texture2D> depthStencil;
     D3D11_TEXTURE2D_DESC textureDesc{};
     textureDesc.Width = swapChainDesc.BufferDesc.Width;
@@ -101,15 +108,20 @@ void Renderer::Init()
     textureDesc.Usage = D3D11_USAGE_DEFAULT;
     textureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
     hr = m_Device->CreateTexture2D(&textureDesc, nullptr, depthStencil.GetAddressOf());
-    if (FAILED(hr)) {
+    if (FAILED(hr))
+    {
         throw std::runtime_error("Failed to create depthStencil.");
     }
 
+    //----------------------------深度テクスチャ→深度ステンシルビューとして登録する---------------------------
     D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc{};
     depthStencilViewDesc.Format = textureDesc.Format;
     depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-    hr = m_Device->CreateDepthStencilView(depthStencil.Get(), &depthStencilViewDesc, m_DepthStencilView.GetAddressOf());
-    if (FAILED(hr)) {
+    hr = m_Device->CreateDepthStencilView(depthStencil.Get(),                   //元となる深度テクスチャ
+                                          &depthStencilViewDesc,                //上で作ったビュー設定
+                                          m_DepthStencilView.GetAddressOf());   //生成したビューを格納する場所
+    if (FAILED(hr)) 
+    {
         throw std::runtime_error("Failed to create depthStencilView.");
     }
 

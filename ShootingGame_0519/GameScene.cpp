@@ -24,12 +24,8 @@ void GameScene::Init()
 
 void GameScene::Update(uint64_t deltatime)
 {
-
-
 	Input::Update();
-
 	m_FreeCamera.Update(deltatime);
-
 }
 
 void GameScene::Draw(uint64_t deltatime)

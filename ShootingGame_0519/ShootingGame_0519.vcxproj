@@ -137,6 +137,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
+    <ClCompile Include="FollowCamera.cpp" />
     <ClCompile Include="FreeCamera.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="GameScene.cpp" />
@@ -152,6 +153,7 @@
     <ClInclude Include="Application.h" />
     <ClInclude Include="BaseCamera.h" />
     <ClInclude Include="commontypes.h" />
+    <ClInclude Include="FollowCamera.h" />
     <ClInclude Include="FreeCamera.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="GameScene.h" />

@@ -5,15 +5,20 @@
 #include "renderer.h"
 #include <filesystem>
 #include <iostream>
-
+//------------------------------------------------------------
+//モデルのファイルを読み込む関数(引数：モデルファイルがある所のパス)
+//------------------------------------------------------------
 bool Model::LoadFromFile(const std::string& path)
 {
-    // ファイルパスからディレクトリ部分を抜き出して保持
+    //ファイルパスからディレクトリ部分を抜き出して保持
     size_t pos = path.find_last_of("/\\");
-    if (pos != std::string::npos) {
+
+    if (pos != std::string::npos)
+    {
         modelDirectory_ = path.substr(0, pos + 1);
     }
-    else {
+    else
+    {
         modelDirectory_.clear();
     }
 
@@ -53,7 +58,8 @@ MeshPart Model::ProcessMesh(aiMesh* mesh, const aiScene* scene)
     aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
     // —— ここからログ出力コード ——
-    std::vector<aiTextureType> types = {
+    std::vector<aiTextureType> types =
+    {
         aiTextureType_DIFFUSE,
         aiTextureType_AMBIENT,
         aiTextureType_EMISSIVE,
@@ -62,16 +68,19 @@ MeshPart Model::ProcessMesh(aiMesh* mesh, const aiScene* scene)
         aiTextureType_NORMALS
     };
 
-    for (auto t : types) {
+    for (auto t : types)
+    {
         unsigned count = material->GetTextureCount(t);
-        if (count > 0) {
+        if (count > 0)
+        {
             aiString path;
             material->GetTexture(t, 0, &path);
             std::cout << "TextureType " << t
                 << " count=" << count
                 << " path=" << path.C_Str() << "\n";
         }
-        else {
+        else
+        {
             std::cout << "TextureType " << t << " count=0\n";
         }
     }
@@ -121,7 +130,8 @@ MeshPart Model::ProcessMesh(aiMesh* mesh, const aiScene* scene)
     }
 
     // インデックス
-    for (UINT f = 0; f < mesh->mNumFaces; ++f) {
+    for (UINT f = 0; f < mesh->mNumFaces; ++f) 
+    {
         const aiFace& face = mesh->mFaces[f];
         indices.insert(indices.end(), face.mIndices, face.mIndices + 3);
     }
@@ -183,7 +193,8 @@ void Model::Draw(const SRT& transform)
 
     auto dc = Renderer::GetDeviceContext();
     UINT stride = sizeof(VERTEX_3D), offset = 0;
-    for (auto& mesh : meshes_) {
+    for (auto& mesh : meshes_)
+    {
         dc->IASetVertexBuffers(0, 1, mesh.vb.GetAddressOf(), &stride, &offset);
         dc->IASetIndexBuffer(mesh.ib.Get(), DXGI_FORMAT_R32_UINT, 0);
 
