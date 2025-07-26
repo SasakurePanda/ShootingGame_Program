@@ -20,11 +20,18 @@ void FreeCamera::Init()
 
 void FreeCamera::Update(uint64_t delta)
 {
+    //Input::Update();  // 先に状態を更新
     float deltaTime = static_cast<float>(delta) / 1000.0f;
-    Input::Update();
+
+    // マウス位置とデルタを std::cout で出力
+    POINT mp = Input::GetMousePosition();
+    POINT md = Input::GetMouseDelta();
+    std::cout << "dt=" << deltaTime
+        << "  MousePos=(" << mp.x << "," << mp.y << ")"
+        << "  Delta=(" << md.x << "," << md.y << ")"
+        << std::endl;
 
     HandleInput(deltaTime);
-
     UpdateViewMatrix();
     UpdateProjectionMatrix();
 }
@@ -84,9 +91,15 @@ void FreeCamera::HandleInput(float deltaTime)
     {
         //std::cout << "カメラ側でQキー押せています\n";
         POINT delta = Input::GetMouseDelta();
-        m_alpha += delta.x * m_rotateSpeed;
-        m_beta  += delta.y * m_rotateSpeed;
-        m_beta   = std::clamp(m_beta, 0.1f, XM_PI - 0.1f);
+        static float prevDx = 0, prevDy = 0;
+        float alpha = 0.2f;  // 0.0~1.0 の重み
+        float smoothDx = prevDx * (1 - alpha) + delta.x * alpha;
+        float smoothDy = prevDy * (1 - alpha) + delta.y * alpha;
+        prevDx = smoothDx; prevDy = smoothDy;
+        m_alpha += smoothDx * m_rotateSpeed * deltaTime;
+        m_beta += smoothDy * m_rotateSpeed * deltaTime;
+
+
     }
 
     // ズームイン/アウト
@@ -109,12 +122,12 @@ void FreeCamera::HandleInput(float deltaTime)
     Vector3 right = forward.Cross(Vector3::Up);
 
     Vector3 move{};
-    if (Input::IsKeyDown('W')) move += forward;
-    if (Input::IsKeyDown('S')) move -= forward;
-    if (Input::IsKeyDown('A')) move -= right;
-    if (Input::IsKeyDown('D')) move += right;
+    if (Input::IsKeyDown('I')) move += forward;
+    if (Input::IsKeyDown('K')) move -= forward;
+    if (Input::IsKeyDown('J')) move -= right;
+    if (Input::IsKeyDown('L')) move += right;
     if (Input::IsKeyDown(VK_SPACE)) move += Vector3::Up;
-    if (Input::IsKeyDown(VK_CONTROL)) move -= Vector3::Up;
+    if (Input::IsKeyDown(VK_RETURN)) move -= Vector3::Up;
 
     if (move.LengthSquared() > 0.0f)
     {

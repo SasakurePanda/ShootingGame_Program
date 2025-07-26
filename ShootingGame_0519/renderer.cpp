@@ -41,6 +41,9 @@ ComPtr<ID3D11PixelShader>  Renderer::m_PixelShader;
 ComPtr<ID3D11InputLayout>  Renderer::m_InputLayout;
 ComPtr<ID3D11InputLayout>  Renderer::m_AxisInputLayout;
 
+ComPtr<ID3D11VertexShader> Renderer::m_GridVertexShader;
+ComPtr<ID3D11PixelShader>  Renderer::m_GridPixelShader;
+
 
 
 //------------------------------------------------------------------------------
@@ -271,27 +274,38 @@ void Renderer::Init()
         { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, offsetof(VERTEX_3D, TexCoord), D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
 
-   /*D3D11_INPUT_ELEMENT_DESC layout[] = {
-    { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 0,                           D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    { "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, sizeof(Vector3),             D3D11_INPUT_PER_VERTEX_DATA, 0 },
-    };*/
     m_Device->CreateInputLayout(layoutDesc, _countof(layoutDesc),vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),m_InputLayout.GetAddressOf());
-
-    // AxisVertex 構造体に対応する InputLayout
-   ///* D3D11_INPUT_ELEMENT_DESC axisLayout[] =
-   // {
-   //     { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, 0,                        D3D11_INPUT_PER_VERTEX_DATA, 0 },
-   //     { "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, sizeof(Vector3),          D3D11_INPUT_PER_VERTEX_DATA, 0 },
-   // };
-
-   //  軸用InputLayoutの生成（軸用シェーダーバイナリ vsBlob を使う）
-   // m_Device->CreateInputLayout(axisLayout, ARRAYSIZE(axisLayout),vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),m_AxisInputLayout.GetAddressOf());*/
-
 
     //-----------------------最後にシェーダー／レイアウトをセット-----------------------
     m_DeviceContext->IASetInputLayout(m_InputLayout.Get());
     m_DeviceContext->VSSetShader(m_VertexShader.Get(), nullptr, 0);
     m_DeviceContext->PSSetShader(m_PixelShader.Get(), nullptr, 0);
+
+    //グリッド用の頂点シェーダーをコンパイル
+    hr = D3DCompileFromFile(
+        L"GridVertexShader.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+        "VSMain", "vs_5_0", D3DCOMPILE_DEBUG, 0,
+        vsBlob.GetAddressOf(), errBlob.GetAddressOf());
+    if (FAILED(hr))
+    {
+        if (errBlob) OutputDebugStringA((char*)errBlob->GetBufferPointer());
+        throw std::runtime_error("Grid頂点シェーダーのコンパイルに失敗");
+    }
+
+    //グリッド用のピクセルシェーダーをコンパイル
+    hr = D3DCompileFromFile(
+        L"GridPixelShader.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+        "PSMain", "ps_5_0", D3DCOMPILE_DEBUG, 0,
+        psBlob.GetAddressOf(), errBlob.GetAddressOf());
+    if (FAILED(hr))
+    {
+        if (errBlob) OutputDebugStringA((char*)errBlob->GetBufferPointer());
+        throw std::runtime_error("Gridピクセルシェーダーのコンパイルに失敗");
+    }
+
+    // シェーダーオブジェクト作成
+    m_Device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, m_GridVertexShader.GetAddressOf());
+    m_Device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, m_GridPixelShader.GetAddressOf());
 }
 
 
@@ -511,4 +525,10 @@ void Renderer::SetDepthAllwaysWrite()
     {
         m_DeviceContext->OMSetDepthStencilState(pDepthStencilState.Get(), 0);
     }
+}
+
+void Renderer::BindGridShader()
+{
+    m_DeviceContext->VSSetShader(m_GridVertexShader.Get(), nullptr, 0);
+    m_DeviceContext->PSSetShader(m_GridPixelShader.Get(), nullptr, 0);
 }

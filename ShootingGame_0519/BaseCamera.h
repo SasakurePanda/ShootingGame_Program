@@ -8,7 +8,7 @@ using namespace DirectX;
 //--------------------------------------------------------------------------------
 class BaseCamera
 {
-private:
+protected:
 	//カメラの座標位置
 	SimpleMath::Vector3	m_position = SimpleMath::Vector3(0.0f, 0.0f, 0.0f);
 	//注視点(カメラの見る点(座標)として向く先の座標)
@@ -22,7 +22,7 @@ private:
 
 public:
 	BaseCamera() = default;
-	virtual ~BaseCamera() = default;
+	virtual ~BaseCamera() noexcept = default;
 
 	virtual void Init() = 0;
 
@@ -44,23 +44,3 @@ public:
 
 };
 
-/*Cameraクラスで最低限必要な物
-
-位置：XMFLOAT3 m_Position
-
-方向：float m_Yaw, float m_Pitch
-
-ビュー行列：XMMATRIX GetViewMatrix()
-
-投影行列：XMMATRIX GetProjectionMatrix()
-ビュー・投影行列の更新
-Renderer::Draw()内などで
-camera.GetViewMatrix()
-camera.GetProjectionMatrix()
-定数バッファに行列を転送
-
-private:
-	XMFLOAT3 m_Position;  //カメラの位置
-	float m_Yaw;		  //カメラの水平方向(左右)の回転角度
-	float m_Pitch;		  //カメラの垂直方向(上下)の回転角度
-*/

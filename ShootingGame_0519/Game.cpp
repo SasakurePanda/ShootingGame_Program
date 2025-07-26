@@ -44,6 +44,6 @@ void Game::GameLoop()
         previousTime = currentTime;
 
         GameUpdate(deltaTime); // ƒQ[ƒ€‚ÌXVˆ—
-        GameDraw(deltaTime); // ƒQ[ƒ€‚Ì•`‰æˆ—
+        GameDraw(deltaTime);   // ƒQ[ƒ€‚Ì•`‰æˆ—
     }
 }

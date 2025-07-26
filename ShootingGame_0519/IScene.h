@@ -25,5 +25,7 @@ public:
 
 	//Uninit関数
 	virtual void Uninit() = 0;	
-	//-----------------------------------------------------------
+	//---------------他からオブジェクトの追加を行う関数--------------
+	virtual void AddObject(std::shared_ptr<class GameObject> obj) = 0;
+
 };

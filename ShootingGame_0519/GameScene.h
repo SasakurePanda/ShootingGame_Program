@@ -3,8 +3,9 @@
 #include <d3d11.h>
 #include "IScene.h"
 #include "FreeCamera.h"
-#include "renderer.h"
-#include "Model.h"
+#include "Player.h"
+#include "CameraObject.h"
+#include "GridFloor.h"
 
 //---------------------------------
 //ISceneを継承したGameScene
@@ -17,10 +18,11 @@ public:
 	void Draw(uint64_t deltatime) override;
 	void Init() override;
 	void Uninit() override;
+	void AddObject(std::shared_ptr<GameObject> obj) override;
+
 private:
-	/*ComPtr<ID3D11Buffer> m_VB; 
-	ComPtr<ID3D11Buffer> m_IB;
-	UINT m_IndexCount = 0;*/
-	FreeCamera m_FreeCamera;
-	std::unique_ptr<Model> m_Model;   // モデル保持用ポインタ
+	std::shared_ptr<Player> m_player;
+	std::shared_ptr<CameraObject> m_FollowCamera;
+	std::vector<std::shared_ptr<GameObject>> m_GameObjects;
+	std::shared_ptr<GridFloor> m_GridFloor;
 };

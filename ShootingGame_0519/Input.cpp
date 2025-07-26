@@ -1,4 +1,5 @@
 #include "Input.h"
+#include "Application.h"
 
 BYTE Input::m_CurrentKeys[256];
 BYTE Input::m_PreviousKeys[256];
@@ -13,8 +14,13 @@ float Input::m_MouseSensitivity = 0.005f;   //マウス感度
 
 void Input::Update()
 {
-    //前のフレームのキー入力を写して保存
+    // キー
     memcpy(m_PreviousKeys, m_CurrentKeys, sizeof(m_CurrentKeys));
+    // マウスボタン
+    memcpy(m_PreviousMouseButtons, m_CurrentMouseButtons, sizeof(m_CurrentMouseButtons));
+    // マウス座標
+    m_PreviousMousePos = m_CurrentMousePos;
+
     //現在のキー状態を取得
     if (!GetKeyboardState(m_CurrentKeys))
     {
@@ -22,15 +28,18 @@ void Input::Update()
         OutputDebugStringA("キーが取れていません！！\n");
     }
 
-    //前のフレームのマウスの座標を写して保存
-    m_PreviousMousePos = m_CurrentMousePos;
+
     //現在のフレームのマウスの座標を取得
     if (!GetCursorPos(&m_CurrentMousePos))
     {
         OutputDebugStringA("GetCursorPos() Failed\n");
     }
+    else
+    {
+        // ウィンドウ左上を (0,0) とするクライアント座標に変換
+        ScreenToClient(Application::GetWindow(), &m_CurrentMousePos);
+    }
 
-    memcpy(m_PreviousMouseButtons, m_CurrentMouseButtons, sizeof(m_CurrentMouseButtons));
 
     m_CurrentMouseButtons[0] = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) ? 1 : 0;
     m_CurrentMouseButtons[1] = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) ? 1 : 0;

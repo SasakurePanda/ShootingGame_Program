@@ -160,8 +160,14 @@ public:
     static ID3D11Buffer* GetWorldBuffer(){ return m_WorldBuffer.Get(); }
     static ID3D11Buffer* GetProjectionBuffer(){ return m_ProjectionBuffer.Get(); }
     
+    static void BindGridShader();
+
     static ComPtr<ID3D11VertexShader> m_VertexShader;
     static ComPtr<ID3D11PixelShader>  m_PixelShader;
     static ComPtr<ID3D11InputLayout>  m_InputLayout;
     static ComPtr<ID3D11InputLayout>  m_AxisInputLayout;
+
+    // Grid専用のシェーダー
+    static ComPtr<ID3D11VertexShader> m_GridVertexShader;
+    static ComPtr<ID3D11PixelShader>  m_GridPixelShader;
 };

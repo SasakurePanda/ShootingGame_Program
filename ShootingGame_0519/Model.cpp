@@ -27,7 +27,7 @@ bool Model::LoadFromFile(const std::string& path)
         aiProcess_Triangulate |
         aiProcess_GenSmoothNormals |
         aiProcess_FlipUVs |
-        aiProcess_FlipWindingOrder   // ← これを追加
+        aiProcess_MakeLeftHanded  // ← これを追加
     );
     if (!scene || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) || !scene->mRootNode) 
     {

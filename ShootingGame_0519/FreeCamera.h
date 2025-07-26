@@ -35,8 +35,4 @@ private:
     float m_moveSpeed = 5.0f;
     float m_rotateSpeed = 0.5f;
     float m_zoomSpeed = 2.0f;
-
-    // çsóÒ
-    DirectX::SimpleMath::Matrix m_viewmtx;
-    DirectX::SimpleMath::Matrix m_projmtx;
 };
