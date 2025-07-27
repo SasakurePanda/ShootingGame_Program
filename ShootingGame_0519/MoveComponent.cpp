@@ -3,36 +3,44 @@
 
 using namespace DirectX::SimpleMath;
 
+void MoveComponent::Initialize()
+{
+
+}
+
 void MoveComponent::Update()
 {
-    // 入力取得
-    SRT move = { {0,0,0} ,{0,0,0} ,{0,0,0} };
+    if (!m_camera) return;
 
-    if (Input::IsKeyDown('W'))
-    {
-        move.pos.z += 1.0f;
-    }
-    if (Input::IsKeyDown('S')) 
-    {
-        move.pos.z -= 1.0f;
-    }
-    if (Input::IsKeyDown('A')) 
-    {
-        move.pos.x += 1.0f;
-    }
-    if (Input::IsKeyDown('D'))
-    {
-        move.pos.x -= 1.0f;
-    }
+    Vector3 forward = m_camera->GetForward();
+    Vector3 right = m_camera->GetRight();
 
-    if (move.pos.LengthSquared() > 0.0f)
-    {
-        move.pos.Normalize();
-        move.pos *= m_speed * 1.0f / 60.0f; // 仮に60FPS前提で1フレーム分の移動
+    // 上下成分を無視して地面に平行に移動
+    forward.y = 0.0f;
+    right.y = 0.0f;
+    forward.Normalize();
+    right.Normalize();
 
-        // 現在の位置を取得・更新
+    Vector3 move = Vector3::Zero;
+
+    if (Input::IsKeyDown('W')) move += forward;
+    if (Input::IsKeyDown('S')) move -= forward;
+    if (Input::IsKeyDown('D')) move += right;
+    if (Input::IsKeyDown('A')) move -= right;
+
+    if (move.LengthSquared() > 0.0f)
+    {
+        move.Normalize();
+        move *= m_speed * (1.0f / 60.0f); // 固定フレーム用
+
         Vector3 pos = GetOwner()->GetPosition();
-        pos += move.pos;
+        pos += move;
         GetOwner()->SetPosition(pos);
+
+        // 進行方向に回転（オプション）
+        float angleY = std::atan2(move.x, move.z); // Y軸回転
+        Vector3 rot = GetOwner()->GetRotation();
+        rot.y = angleY;
+        GetOwner()->SetRotation(rot);
     }
 }

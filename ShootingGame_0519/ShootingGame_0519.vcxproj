@@ -176,6 +176,7 @@
     <ClInclude Include="GameScene.h" />
     <ClInclude Include="GridFloor.h" />
     <ClInclude Include="GridShaderComponent.h" />
+    <ClInclude Include="ICameraViewProvider.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="IScene.h" />
     <ClInclude Include="LineRenderer.h" />

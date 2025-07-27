@@ -43,6 +43,9 @@
     <Filter Include="ヘッダー ファイル\ShaderComponent">
       <UniqueIdentifier>{f5cf142b-9ce4-4d10-9d75-213408e4859e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ヘッダー ファイル\Interface">
+      <UniqueIdentifier>{42ce57c4-bc92-449c-b7f4-21e62a015295}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -205,6 +208,9 @@
     </ClInclude>
     <ClInclude Include="ShootingComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="ICameraViewProvider.h">
+      <Filter>ヘッダー ファイル\Interface</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

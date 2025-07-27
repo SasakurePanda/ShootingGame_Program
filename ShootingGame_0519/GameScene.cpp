@@ -12,6 +12,7 @@ void GameScene::Init()
     m_player -> SetRotation({ 0.0f,0.0f, 0.0f });
     m_player -> SetScale({ 0.3f, 0.3f, 0.3f });
     m_player -> Initialize();
+    auto moveComp = m_player->GetComponent<MoveComponent>();
     
     // ShootingComponent に this（現在のシーン）を渡す
     auto shootComp = m_player->GetComponent<ShootingComponent>();
@@ -23,6 +24,12 @@ void GameScene::Init()
     //CameraObjectst作成
     m_FollowCamera = std::make_shared<CameraObject>();
     m_FollowCamera ->Initialize();
+    auto cameraComp = m_FollowCamera->GetComponent<FollowCameraComponent>();
+
+    if (moveComp && cameraComp)
+    {
+        moveComp->SetCameraView(cameraComp.get()); // ←重要！
+    }
 
     m_GridFloor = std::make_shared<GridFloor>();
     m_GridFloor->SetPosition({ 0.0f, 0.0f, 40.0f }); // プレイヤーの下に置く

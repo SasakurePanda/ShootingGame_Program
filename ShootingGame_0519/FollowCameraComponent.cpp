@@ -1,22 +1,23 @@
-#include "FollowCameraComponent.h"
+ï»¿#include "FollowCameraComponent.h"
 #include "Renderer.h"
 #include "Application.h"
+#include "Input.h"
 
 FollowCameraComponent::FollowCameraComponent()
 {
-    // Spring İ’èi‰Šú‰»‚Éˆê“x‚¾‚¯j
-    m_Spring.SetStiffness(12.0f); // ƒoƒl‚Ì‹­‚³
-    m_Spring.SetDamping(6.0f);    // ƒ_ƒ“ƒp[‚Ì‹­‚³
-    m_Spring.SetMass(1.0f);       // ¿—ÊiŠî–{1.0f‚ÅOKj
+    // Spring è¨­å®šï¼ˆåˆæœŸåŒ–æ™‚ã«ä¸€åº¦ã ã‘ï¼‰
+    m_Spring.SetStiffness(12.0f); // ãƒãƒã®å¼·ã•
+    m_Spring.SetDamping(6.0f);    // ãƒ€ãƒ³ãƒ‘ãƒ¼ã®å¼·ã•
+    m_Spring.SetMass(1.0f);       // è³ªé‡ï¼ˆåŸºæœ¬1.0fã§OKï¼‰
 
-    // ‰ŠúƒvƒƒWƒFƒNƒVƒ‡ƒ“s—ñiŒÅ’èj
-    //‰æ–Ê•‚ğæ“¾‚µAfloat‚Ì•Ï”‚É•Û‘¶
+    // åˆæœŸãƒ—ãƒ­ã‚¸ã‚§ã‚¯ã‚·ãƒ§ãƒ³è¡Œåˆ—ï¼ˆå›ºå®šï¼‰
+    //ç”»é¢å¹…ã‚’å–å¾—ã—ã€floatã®å¤‰æ•°ã«ä¿å­˜
     float width = static_cast<float>(Application::GetWidth());
 
-    //‰æ–Ê‚‚³‚ğæ“¾‚µBfloat‚Ì•Ï”‚É•Û‘¶
+    //ç”»é¢é«˜ã•ã‚’å–å¾—ã—ã€‚floatã®å¤‰æ•°ã«ä¿å­˜
     float height = static_cast<float>(Application::GetHeight());
 
-    //“§‹“Š‰es—ñ‚ğì‚éŠÖ”(3D‚ğ2D‚É—‚Æ‚µ‚Ş‚æ)
+    //é€è¦–æŠ•å½±è¡Œåˆ—ã‚’ä½œã‚‹é–¢æ•°(3Dã‚’2Dã«è½ã¨ã—è¾¼ã‚€ã‚ˆ)
     m_ProjectionMatrix = Matrix4x4::CreatePerspectiveFieldOfView(XMConvertToRadians(45.0f), width / height, 0.1f, 1000.0f);
 }
 
@@ -24,37 +25,51 @@ void FollowCameraComponent::Update()//
 {
     if (!m_Target) return;
 
-    Vector3 targetPos = m_Target->GetPosition();
-    Vector3 desiredPos = targetPos + Vector3(0, m_Height, -m_Distance);
+    //-------------------------
+    //ãƒã‚¦ã‚¹ã‹ã‚‰è§’åº¦ã‚’å–å¾—
+    //-------------------------
+    POINT delta = Input::GetMouseDelta();
 
-    float deltaTime = 1.0f / 60.0f; // ŒÅ’è‚Å‚à‚æ‚¢‚ªAApplication::GetDeltaTime()‚Å‚àOK
+    float sensitivity = 0.01f; // å¿…è¦ã«å¿œã˜ã¦èª¿æ•´
+    // å›è»¢è§’åº¦æ›´æ–°
+    m_Yaw += delta.x * sensitivity;
+    m_Pitch += delta.y * sensitivity;
+
+    // å›è»¢åˆ¶é™ï¼ˆãƒ”ãƒƒãƒï¼šä¸Šä¸‹ï¼‰
+    float pitchLimit = XMConvertToRadians(0.0f); // ä¸Šä¸‹æœ€å¤§ Â±80åº¦
+    m_Pitch = std::clamp(m_Pitch, -pitchLimit, pitchLimit);
+
+    // ä»»æ„ï¼šYawåˆ¶é™ï¼ˆå·¦å³æœ€å¤§ Â±120åº¦ãªã©ï¼‰
+    float yawLimit = XMConvertToRadians(40.0f); // ä¾‹ï¼šåˆ¶é™ã—ãŸã„ãªã‚‰
+    m_Yaw = std::clamp(m_Yaw, -yawLimit, yawLimit);
+
+    //-------------------------------
+    //å›è»¢ã«åŸºã¥ã„ã¦ã‚«ãƒ¡ãƒ©ä½ç½®ã‚’è¨ˆç®—
+    //-------------------------------
+    Vector3 targetPos = m_Target->GetPosition();
+
+    Matrix rotY = Matrix::CreateRotationY(m_Yaw);
+    Matrix rotX = Matrix::CreateRotationX(m_Pitch);
+    Matrix rotation = rotX * rotY;
+
+    // ã‚«ãƒ¡ãƒ©ã®ç›¸å¯¾ä½ç½®ï¼ˆZæ–¹å‘ã«å¾Œã‚ï¼‰
+    Vector3 offset = Vector3(0, 0, -m_Distance);
+    Vector3 rotatedOffset = Vector3::Transform(offset, rotation);
+
+    Vector3 desiredPos = targetPos + rotatedOffset + Vector3(0, m_Height, 0);
+
+    // ãƒãƒæ›´æ–°
+    float deltaTime = 1.0f / 60.0f; // å›ºå®šã§ã‚‚OK
     m_Spring.Update(desiredPos, deltaTime);
 
     Vector3 cameraPos = m_Spring.GetPosition();
+
+    // ãƒ“ãƒ¥ãƒ¼è¡Œåˆ—ã‚’ç”Ÿæˆ
     m_ViewMatrix = Matrix4x4::CreateLookAt(cameraPos, targetPos, Vector3::Up);
 
+    // ãƒ¬ãƒ³ãƒ€ãƒ©ã«æ¸¡ã™
     Renderer::SetViewMatrix(m_ViewMatrix);
     Renderer::SetProjectionMatrix(m_ProjectionMatrix);
 }
 
-void FollowCameraComponent::SetTarget(GameObject* target)
-{
-    m_Target = target;
-    if (target)
-    {
-        Vector3 initial = target->GetPosition() + Vector3(0, m_Height, -m_Distance);
-        m_Spring.Reset(initial);
-    }
-}
 
-void FollowCameraComponent::SetDistance(float dist)
-{
-    m_Distance = dist;
-}
-
-void FollowCameraComponent::SetHeight(float h)
-{
-    m_Height = h;
-}
-
-//ƒ_ƒ“ƒsƒ“ƒO‚Î‚Ë
