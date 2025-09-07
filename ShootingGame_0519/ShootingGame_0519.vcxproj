@@ -145,15 +145,11 @@
     <ClCompile Include="DebugGlobals.cpp" />
     <ClCompile Include="DebugRenderer.cpp" />
     <ClCompile Include="Enemy.cpp" />
-    <ClCompile Include="FollowCamera.cpp" />
     <ClCompile Include="FollowCameraComponent.cpp" />
-    <ClCompile Include="FreeCamera.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="GameScene.cpp" />
-    <ClCompile Include="GridFloor.cpp" />
     <ClCompile Include="Input.cpp" />
-    <ClCompile Include="LineRenderer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="ModelComponent.cpp" />
@@ -162,8 +158,11 @@
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Primitive.cpp" />
     <ClCompile Include="renderer.cpp" />
+    <ClCompile Include="Reticle.cpp" />
     <ClCompile Include="SceneManager.cpp" />
     <ClCompile Include="ShootingComponent.cpp" />
+    <ClCompile Include="SkyDome.cpp" />
+    <ClCompile Include="SkyDomeComponent.cpp" />
     <ClCompile Include="TextureComponent.cpp" />
     <ClCompile Include="TextureManager.cpp" />
   </ItemGroup>
@@ -183,17 +182,13 @@
     <ClInclude Include="DebugGlobals.h" />
     <ClInclude Include="DebugRenderer.h" />
     <ClInclude Include="Enemy.h" />
-    <ClInclude Include="FollowCamera.h" />
     <ClInclude Include="FollowCameraComponent.h" />
-    <ClInclude Include="FreeCamera.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="GameScene.h" />
-    <ClInclude Include="GridFloor.h" />
     <ClInclude Include="ICameraViewProvider.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="IScene.h" />
-    <ClInclude Include="LineRenderer.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="ModelComponent.h" />
@@ -203,8 +198,11 @@
     <ClInclude Include="Player.h" />
     <ClInclude Include="Primitive.h" />
     <ClInclude Include="renderer.h" />
+    <ClInclude Include="Reticle.h" />
     <ClInclude Include="SceneManager.h" />
     <ClInclude Include="ShootingComponent.h" />
+    <ClInclude Include="SkyDome.h" />
+    <ClInclude Include="SkyDomeComponent.h" />
     <ClInclude Include="SpringVector3.h" />
     <ClInclude Include="TextureComponent.h" />
     <ClInclude Include="TextureManager.h" />
@@ -260,14 +258,16 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PSMain</EntryPointName>
     </FxCompile>
     <FxCompile Include="TextureVertexShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VSMain</EntryPointName>
     </FxCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

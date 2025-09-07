@@ -35,8 +35,8 @@ void Player::Initialize()
     SetRotation(DirectX::SimpleMath::Vector3(0.0f, 0.0f, 0.0f));
 }
 
-void Player::Update()
+void Player::Update(float dt)
 {
     //コンポーネント等のUpdate
-    GameObject::Update();
+    GameObject::Update(dt);
 }

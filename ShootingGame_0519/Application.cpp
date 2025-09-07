@@ -1,6 +1,7 @@
+#include <chrono>
+#include <iostream>
 #include "Application.h"
 #include "renderer.h"
-#include <chrono>
 #include "DebugGlobals.h"
 
 constexpr auto ClassName  = TEXT("2025 就職作品 ");         //ウィンドウクラス名.
@@ -13,6 +14,7 @@ HINSTANCE  Application::m_hInst;        //インスタンスハンドルです.
 HWND       Application::m_hWnd;         //ウィンドウハンドルです.
 uint32_t   Application::m_Width;        //ウィンドウの横幅です.
 uint32_t   Application::m_Height;       //ウィンドウの縦幅です.
+float      Application::m_DeltaTime;
 
 //ImGuiのWin32プロシージャハンドラ(マウス対応)
 //extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -53,13 +55,13 @@ void Application::MainLoop()
     // ゲームの初期化
     Game::GameInit();
 
-
-    // --- DebugRendererの初期化（必ず Renderer::Init() の後） ---
+    //DebugRendererの初期化（必ず Renderer::Init() の後）
     gDebug.Initialize(Renderer::GetDevice(), Renderer::GetDeviceContext(),
         L"DebugLineVS.cso", L"DebugLinePS.cso");
 
     // メインループ
     auto previousTime = std::chrono::steady_clock::now();
+
     while (msg.message != WM_QUIT)
     {
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
@@ -69,18 +71,21 @@ void Application::MainLoop()
         }
         else
         {
-            // ΔTime計算
+            //Time 計算
             auto currentTime = std::chrono::steady_clock::now();
-            uint64_t deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - previousTime).count();
+            std::chrono::duration<float> delta = currentTime - previousTime;
+            m_DeltaTime = delta.count(); //秒単位で保持
             previousTime = currentTime;
 
-            // 毎フレームの更新・描画
-            Game::GameUpdate(deltaTime);
-            Game::GameDraw(deltaTime);
+            std::cout << "デルタタイム : " << m_DeltaTime << std::endl;
+
+            //更新・描画
+            Game::GameUpdate(m_DeltaTime);
+            Game::GameDraw(m_DeltaTime);
         }
     }
 
-    // ゲーム終了処理
+    //ゲーム終了処理
     Game::GameUninit();
 }
 

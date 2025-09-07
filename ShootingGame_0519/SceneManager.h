@@ -30,10 +30,10 @@ public:
 	static std::string GetCurrentSceneName();
 
 	//現在シーンの更新処理をする関数
-	static void Update(uint64_t deltatime);
+	static void Update(float deltatime);
 
 	//現在シーンの描画処理をする関数
-	static void Draw(uint64_t deltatime);
+	static void Draw(float deltatime);
 
 	//シーンマネージャーの初期化をする関数
 	static void Init();

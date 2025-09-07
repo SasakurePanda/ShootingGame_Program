@@ -113,7 +113,7 @@ void CollisionManager::CheckCollisions()
             if (hit)
             {
                 // ✅ 当たっている場合のログ
-                std::cout << "当たっています" << std::endl;
+                //std::cout << "当たっています" << std::endl;
 
                 // コリジョンイベント通知
                 colA->SetHitThisFrame(true);
@@ -124,7 +124,7 @@ void CollisionManager::CheckCollisions()
             else
             {
                 // ✅ 当たっていない場合のログ（デバッグ時のみ有効にするといい）
-                std::cout << "当たっていません "<< std::endl;
+                //std::cout << "当たっていません "<< std::endl;
             }
         }
     }

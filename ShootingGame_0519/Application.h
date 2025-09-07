@@ -43,6 +43,11 @@ public:
         return m_hInst;
     }
 
+    static float GetDeltaTime()
+    {
+        return m_DeltaTime; 
+    }
+
     static void HideCursorAndClip();   // マウスカーソルを非表示＆固定
     static void ShowCursorAndRelease(); // マウスカーソルを表示＆固定解除
 
@@ -51,7 +56,8 @@ private:
     static HWND        m_hWnd;     //ウィンドウハンドル
     static uint32_t    m_Width;    //ウィンドウの横幅
     static uint32_t    m_Height;   //ウィンドウの縦幅 
-    
+    static float       m_DeltaTime;
+
     static bool InitApp();   //アプリケーションの初期化
     static void UninitApp(); //アプリケーションの終了処理
     static bool InitWnd();   //ウィンドウの初期化

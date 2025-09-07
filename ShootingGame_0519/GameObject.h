@@ -15,9 +15,8 @@ public:
     virtual ~GameObject() = default;
 
     virtual void Initialize();
-    virtual void Update();
-    virtual void Draw();
-
+    virtual void Update(float dt);   
+    virtual void Draw(float alpha); 
     template<typename T, typename... Args>
     std::shared_ptr<T> AddComponent(Args&&... args)
     {
@@ -74,5 +73,6 @@ private:
     std::vector<std::shared_ptr<Component>> m_components;
     SRT m_transform;
     Vector3 m_localPosition; // 現在ある位置
-    GameObject* m_parent = nullptr; // 親オブジェクト（親がいない場合は nullptr）
+    GameObject* m_parent = nullptr; // 親オブジェクト（親がいない場合は nullptr）]
+    SRT m_prevTransform; // ← 補間用に追加
 };

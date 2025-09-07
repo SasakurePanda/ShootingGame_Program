@@ -8,7 +8,7 @@ public:
 
     void Initialize() override;
 
-    void Update() override;
+    void Update(float dt) override;
 
     void SetVelocity(const Vector3& dir) { m_velocity = dir; }
     void SetSpeed(float speed) { m_speed = speed; }

@@ -1,13 +1,16 @@
-Texture2D tex : register(t0);
-SamplerState samp : register(s0);
+// TexturePixelShader.hlsl
+Texture2D tex0 : register(t0);
+SamplerState samp0 : register(s0);
 
-struct PSInput
+struct PS_INPUT
 {
-    float4 posH : SV_POSITION;
-    float2 uv : TEXCOORD;
+    float4 position : SV_POSITION;
+    float2 texcoord : TEXCOORD;
 };
 
-float4 PSMain(PSInput input) : SV_TARGET
+float4 PSMain(PS_INPUT input) : SV_TARGET
 {
-    return tex.Sample(samp, input.uv);
+    float4 col = tex0.Sample(samp0, input.texcoord);
+    // 標準的なアルファ合成（SRC_ALPHA, INV_SRC_ALPHA）を想定
+    return col;
 }

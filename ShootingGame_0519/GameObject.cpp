@@ -8,19 +8,21 @@ void GameObject::Initialize()
     }
 }
 
-void GameObject::Update() 
+void GameObject::Update(float dt)
 {
-    for (auto& comp : m_components) 
-    {
-        comp->Update();
+    m_prevTransform = m_transform;
+
+    // 各コンポーネントへ固定ステップ dt を渡す
+    for (auto& comp : m_components) {
+        comp->Update(dt);
     }
 }
 
-void GameObject::Draw() 
+void GameObject::Draw(float alpha)
 {
-    for (auto& comp : m_components) 
+    for (auto& comp : m_components)
     {
-        comp->Draw();
+        comp->Draw(alpha);
     }
 }
 

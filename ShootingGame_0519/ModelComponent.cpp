@@ -47,12 +47,12 @@ void ModelComponent::Initialize()
     LoadModel(m_filepath);
 }
 
-void ModelComponent::Update()
+void ModelComponent::Update(float dt)
 {
     // ƒ‚ƒfƒ‹Ž©‘Ì‚É“®‚«‚ª‚È‚¢ê‡‚Í‹ó‚Å‚àOK
 }
 
-void ModelComponent::Draw()
+void ModelComponent::Draw(float alpha)
 {
     for (const auto& mesh : m_meshes)
     {
@@ -86,6 +86,9 @@ void ModelComponent::Draw()
 
         // •`‰æ
         Renderer::GetDeviceContext()->DrawIndexed(mesh.indexCount, 0, 0);
+
+
+        Renderer::GetDeviceContext()->PSSetShaderResources(0, 1, nullSRV);
     }
 }
 

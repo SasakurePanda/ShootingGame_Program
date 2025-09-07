@@ -16,7 +16,7 @@ public:
     void Initialize() override;
 
     //描画
-    void Draw() override;
+    void Draw(float alpha) override;
 
     //テクスチャ読み込み
     bool LoadTexture(const std::wstring& filepath);
@@ -26,6 +26,9 @@ public:
 
     //サイズのセット関数
     void SetSize(float width, float height) { m_Size = { width ,height }; }
+
+    // TextureComponent.h に追加
+    ID3D11ShaderResourceView* GetSRV() const { return m_TextureSRV.Get(); }
 
 private:
     //Texture保存変数

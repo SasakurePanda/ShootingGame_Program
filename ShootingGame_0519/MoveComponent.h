@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "Component.h"
 #include "Input.h"
 #include "ICameraViewProvider.h"
@@ -11,21 +11,22 @@ public:
     ~MoveComponent() override = default;
 
     void Initialize() override;
-    void Update() override;
+    void Update(float dt) override;
 
-    //ˆÚ“®‘¬“x‚ÌƒZƒbƒgŠÖ”
+    //ç§»å‹•é€Ÿåº¦ã®ã‚»ãƒƒãƒˆé–¢æ•°
     void SetSpeed(float speed) { m_speed = speed; }
 
-    //ˆÚ“®‚Ì‘OŒã¶‰E‚ğŒˆ‚ß‚é‚½‚ß‚Ég‚¤ƒJƒƒ‰‚ÌƒZƒbƒgŠÖ”
+    //ç§»å‹•ã®å‰å¾Œå·¦å³ã‚’æ±ºã‚ã‚‹ãŸã‚ã«ä½¿ã†ã‚«ãƒ¡ãƒ©ã®ã‚»ãƒƒãƒˆé–¢æ•°
     void SetCameraView(ICameraViewProvider* camera) { m_camera = camera; }
 
 private: 
-    //ƒ†ƒjƒbƒg/•b
-    float m_speed = 1.0f;
+    //ãƒ¦ãƒ‹ãƒƒãƒˆ/ç§’
+    float m_speed = 7.5f;
 
-    //ƒJƒƒ‰‚ÌŒü‚«‚ğæ“¾‚·‚é—p‚Ìƒ|ƒCƒ“ƒ^
+    //ã‚«ãƒ¡ãƒ©ã®å‘ãã‚’å–å¾—ã™ã‚‹ç”¨ã®ãƒã‚¤ãƒ³ã‚¿
     ICameraViewProvider* m_camera = nullptr;
     
-    //Y²‰ñ“]‘¬“xiƒ‰ƒWƒAƒ“/•bj
-    float m_rotateSpeed = 4.0f; 
+    float m_rotateSpeed = 7.5f; // rad/s: èª¿æ•´å¯ï¼ˆ2.5ã€œ4.0 ã‚’æ¨å¥¨ï¼‰
+
+    float m_currentRoll = 0.0f; // ç¾åœ¨ã®ãƒ­ãƒ¼ãƒ«ï¼ˆmember ã«å¤‰æ›´ï¼‰
 };

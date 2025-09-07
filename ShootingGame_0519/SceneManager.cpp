@@ -3,7 +3,6 @@
 #include "GameScene.h"
 #include "Application.h" 
        
-
 std::unordered_map<std::string, std::unique_ptr<IScene>> SceneManager::m_scenes;
 
 std::string SceneManager::m_currentSceneName;
@@ -55,13 +54,13 @@ void SceneManager::Init()
     m_currentSceneName = "GameScene";
 }
 
-void SceneManager::Update(uint64_t deltatime)
+void SceneManager::Update(float deltatime)
 {
     //現在選択中のSceneクラスのUpdateをかける
     m_scenes[m_currentSceneName]->Update(deltatime);
 }
 
-void SceneManager::Draw(uint64_t deltatime)
+void SceneManager::Draw(float deltatime)
 {
     //現在選択中のSceneクラスのDrawをかける
     m_scenes[m_currentSceneName]->Draw(deltatime);

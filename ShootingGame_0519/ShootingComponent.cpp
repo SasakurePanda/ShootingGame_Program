@@ -1,7 +1,7 @@
 ﻿#include "ShootingComponent.h"
 #include <Windows.h>
 
-void ShootingComponent::Update()
+void ShootingComponent::Update(float dt)
 {
     float deltaTime = 1.0f / 60.0f;
     m_timer += deltaTime;

@@ -23,8 +23,8 @@ void Enemy::Initialize()
     //----------------------------------------------
 }
 
-void Enemy::Update()
+void Enemy::Update(float dt)
 {
     //コンポーネント等のUpdate
-    GameObject::Update();
+    GameObject::Update(dt);
 }

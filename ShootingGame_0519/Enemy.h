@@ -13,7 +13,7 @@ public:
     ~Enemy() override = default;
 
     void Initialize() override;
-    void Update() override;
+    void Update(float dt) override;
 private:
     std::shared_ptr<OBBColliderComponent> m_Collider;
 };

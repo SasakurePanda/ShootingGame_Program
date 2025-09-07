@@ -20,7 +20,7 @@ void BulletComponent::Initialize()
     m_speed = 20.0f;
 }
 
-void BulletComponent::Update()
+void BulletComponent::Update(float dt)
 {
     if (auto owner = GetOwner())
     {

@@ -8,7 +8,7 @@
 class ShootingComponent : public Component
 {
 public:
-    void Update() override;
+    void Update(float dt) override;
 
     void SetScene(IScene* scene) { m_scene = scene; }
     void SetCamera(ICameraViewProvider* camera) { m_camera = camera; } // Å©í«â¡ÅI

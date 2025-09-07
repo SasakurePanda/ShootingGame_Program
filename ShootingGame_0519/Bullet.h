@@ -7,6 +7,6 @@ class Bullet : public GameObject
 {
 public:
     void Initialize() override;
-    void Update() override;
+    void Update(float dt) override;
 };
 

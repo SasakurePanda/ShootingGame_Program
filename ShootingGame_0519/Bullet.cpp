@@ -12,7 +12,7 @@ void Bullet::Initialize()
         AddComponent(bullet);
 }
 
-void Bullet::Update()
+void Bullet::Update(float dt)
 {
-    GameObject::Update();
+    GameObject::Update(dt);
 }

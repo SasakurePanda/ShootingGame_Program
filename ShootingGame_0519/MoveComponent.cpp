@@ -1,5 +1,6 @@
 #include "MoveComponent.h"
 #include "GameObject.h"
+#include "Application.h"
 #include <iostream>
 //#include <DirectXMath.h>
 
@@ -14,68 +15,60 @@ void MoveComponent::Initialize()
 
 }
 
-void MoveComponent::Update()
+void MoveComponent::Update(float dt)
 {
-    //カメラがセットされていない場合は処理を終了する
     if (!m_camera) return;
 
-    //カメラから前方向を取得
-    Vector3 forward = m_camera->GetForward();
+    // 1) 目標点（ワールド）をカメラから取得
+    Vector3 aimTarget = m_camera->GetAimPoint();
 
-    //カメラから右方向を取得
-    Vector3 right = m_camera->GetRight();
+    // 2) 現在の位置と向き
+    Vector3 pos = GetOwner()->GetPosition();
+    Vector3 rot = GetOwner()->GetRotation(); // rot.x=pitch, rot.y=yaw, rot.z=roll の想定
+    float currentYaw = rot.y;
 
-    //上下方向を無視するために0.0にする
-    forward.y = 0.0f;
-    right.y = 0.0f;
-
-    //前方向と右方向を正規化
-    forward.Normalize();
-    right.Normalize();
-
-
-    Vector3 moveDir = Vector3::Zero;
-
-    // 入力処理
-    //前進
-    if (Input::IsKeyDown('W')) moveDir += forward;
-    //後退（向きは変えずに後ろに歩く）
-    if (Input::IsKeyDown('S')) moveDir -= forward;
-    //右移動（ストライフ）
-    if (Input::IsKeyDown('D')) moveDir += right;
-    //左移動（ストライフ）
-    if (Input::IsKeyDown('A')) moveDir -= right;
-
-    if (moveDir.LengthSquared() > 0.0f)
+    // 3) 目標方向（水平のみ）
+    Vector3 toTarget = aimTarget - pos;
+    toTarget.y = 0.0f;
+    if (toTarget.LengthSquared() < 1e-6f)
     {
-        //方向だけ必要なので正規化
-        moveDir.Normalize();
-
-        //移動距離 = 単位速度 × フレーム時間（1/60秒固定）
-        Vector3 pos = GetOwner()->GetPosition();
-        pos += moveDir * m_speed * (1.0f / 60.0f);
+        Vector3 forward = Vector3(std::sin(currentYaw), 0.0f, std::cos(currentYaw));
+        forward.Normalize();
+        pos += forward * m_speed * dt;
         GetOwner()->SetPosition(pos);
-
-        // Wキーのみ、向きを徐々に変える
-        if (Input::IsKeyDown('W'))
-        {
-            
-            //Y軸の回転角を取得
-            float targetYaw = std::atan2(moveDir.x, moveDir.z); 
-
-            //今のプレイヤーの向きを取得
-            Vector3 rot = GetOwner()->GetRotation();
-
-            // 差分（ラップ処理）
-            float delta = targetYaw - rot.y;
-            while (delta > XM_PI) delta -= XM_2PI;
-            while (delta < -XM_PI) delta += XM_2PI;
-
-            // 徐々に回転
-            rot.y += delta * m_rotateSpeed * (1.0f / 60.0f);
-            GetOwner()->SetRotation(rot);
-        }
+        return;
     }
+    toTarget.Normalize();
 
-    std::cout << "Moveの更新は出来ています" << std::endl;
+    // 4) 目標 yaw を求める（forward 定義と整合）
+    float targetYaw = std::atan2(toTarget.x, toTarget.z);
+
+    // 5) yaw 差のラップ
+    float delta = targetYaw - currentYaw;
+    while (delta > XM_PI) delta -= XM_2PI;
+    while (delta < -XM_PI) delta += XM_2PI;
+
+    // 6) 角速度上限で回す
+    float maxTurn = m_rotateSpeed * dt;
+    float applied = std::clamp(delta, -maxTurn, maxTurn);
+    currentYaw += applied;
+
+    // 7) ロール（バンク）演出（lerp で滑らかに）
+    Vector3 currentForward = Vector3(std::sin(currentYaw), 0.0f, std::cos(currentYaw));
+    currentForward.Normalize();
+    float lateral = currentForward.x * toTarget.z - currentForward.z * toTarget.x; // cross.y
+    constexpr float DegToRad = 3.14159265358979323846f / 180.0f;
+    float maxBankAngle = 20.0f * DegToRad; // 20 deg
+    float desiredRoll = -lateral * maxBankAngle;
+    float bankSmooth = 6.0f; // 値を変えてフィールを調整
+    m_currentRoll = m_currentRoll + (desiredRoll - m_currentRoll) * std::min(1.0f, bankSmooth * dt);
+
+    // 8) 回転と位置を反映
+    rot.y = currentYaw;
+    rot.z = m_currentRoll;
+    GetOwner()->SetRotation(rot);
+
+    // 9) 常に前進
+    pos += currentForward * m_speed * dt;
+    GetOwner()->SetPosition(pos);
 }

@@ -39,8 +39,8 @@ public:
     ~ModelComponent() override = default;
     void LoadModel(const std::string& filepath);
     void Initialize() override;
-    void Update() override;
-    void Draw() override;
+    void Update(float dt) override;
+    void Draw(float alpha) override;
 
 private:
  

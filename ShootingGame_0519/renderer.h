@@ -160,6 +160,10 @@ public:
     static ID3D11Buffer* GetViewBuffer(){ return m_ViewBuffer.Get(); }
     static ID3D11Buffer* GetWorldBuffer(){ return m_WorldBuffer.Get(); }
     static ID3D11Buffer* GetProjectionBuffer(){ return m_ProjectionBuffer.Get(); }
+
+    //レティクル用の関数
+    static void DrawReticle(ID3D11ShaderResourceView* texture, const POINT& center, const Vector2& size);
+
     
     //static void BindGridShader();
 

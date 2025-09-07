@@ -314,6 +314,45 @@ void Renderer::Init()
     m_Device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, m_GridVertexShader.GetAddressOf());
     m_Device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, m_GridPixelShader.GetAddressOf());
 
+    // --- テクスチャ用シェーダーのコンパイル ---
+    ComPtr<ID3DBlob> texVsBlob;
+    ComPtr<ID3DBlob> texPsBlob;
+    ComPtr<ID3DBlob> texErrBlob;
+
+    // 頂点シェーダーコンパイル
+    hr = D3DCompileFromFile(
+        L"TextureVertexShader.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+        "VSMain", "vs_5_0", D3DCOMPILE_DEBUG, 0,
+        texVsBlob.GetAddressOf(), texErrBlob.GetAddressOf());
+    if (FAILED(hr)) {
+        if (texErrBlob) OutputDebugStringA((char*)texErrBlob->GetBufferPointer());
+        throw std::runtime_error("Texture vertex shader compile failed");
+    }
+
+    // ピクセルシェーダーコンパイル
+    hr = D3DCompileFromFile(
+        L"TexturePixelShader.hlsl", nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE,
+        "PSMain", "ps_5_0", D3DCOMPILE_DEBUG, 0,
+        texPsBlob.GetAddressOf(), texErrBlob.GetAddressOf());
+    if (FAILED(hr)) {
+        if (texErrBlob) OutputDebugStringA((char*)texErrBlob->GetBufferPointer());
+        throw std::runtime_error("Texture pixel shader compile failed");
+    }
+
+    // シェーダーオブジェクト作成
+    m_Device->CreateVertexShader(texVsBlob->GetBufferPointer(), texVsBlob->GetBufferSize(), nullptr, m_TextureVertexShader.GetAddressOf());
+    m_Device->CreatePixelShader(texPsBlob->GetBufferPointer(), texPsBlob->GetBufferSize(), nullptr, m_TexturePixelShader.GetAddressOf());
+
+    // 入力レイアウト（位置(float3) + UV(float2)）
+    D3D11_INPUT_ELEMENT_DESC texLayoutDesc[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+
+    m_Device->CreateInputLayout(texLayoutDesc, _countof(texLayoutDesc),
+        texVsBlob->GetBufferPointer(), texVsBlob->GetBufferSize(), m_TextureInputLayout.GetAddressOf());
+
 }
 
 
@@ -597,7 +636,50 @@ void Renderer::DrawTexture(ID3D11ShaderResourceView* texture, const Vector2& pos
 
     // 描画実行
     m_DeviceContext->Draw(6, 0);
+
+    // --------------------------
+   // 描画後に SRV をアンバインド（スロット0を null に戻す）
+   // --------------------------
+    ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
+    m_DeviceContext->PSSetShaderResources(0, 1, nullSRV);
+
+    // --------------------------
+    // DrawTexture は入力レイアウトやシェーダーを差し替えるため、
+    // 後続の3D描画が崩れないように元の（3D）状態に戻す
+    // --------------------------
+    // ここでは Renderer が Init() で作成している m_InputLayout / m_VertexShader / m_PixelShader に戻す
+    m_DeviceContext->IASetInputLayout(m_InputLayout.Get());
+    m_DeviceContext->VSSetShader(m_VertexShader.Get(), nullptr, 0);
+    m_DeviceContext->PSSetShader(m_PixelShader.Get(), nullptr, 0);
+
+    // （必要ならプリミティブトポロジーも戻す）
+    m_DeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
+
+void Renderer::DrawReticle(ID3D11ShaderResourceView* texture, const POINT& center, const Vector2& size)
+{
+    if (!texture) return;
+
+    // 中心位置 -> 左上に変換
+    Vector2 topLeft;
+    topLeft.x = static_cast<float>(center.x) - size.x * 0.5f;
+    topLeft.y = static_cast<float>(center.y) - size.y * 0.5f;
+
+    // 深度無効・アルファブレンド有効にして描画
+    bool prevDepthEnable = true; // （状態を戻す必要があれば管理）
+    // 深度を OFF にする
+    Renderer::SetDepthEnable(false);
+    // 半透明ブレンド（既に BS_ALPHABLEND が用意されています）
+    Renderer::SetBlendState(BS_ALPHABLEND);
+
+    // 実際の描画（既に DrawTexture にシェーダーバインド等まとめてある）
+    Renderer::DrawTexture(texture, topLeft, size);
+
+    // 表示後、深度を元に戻す（呼び出し側の期待に合わせて戻します）
+    Renderer::SetDepthEnable(true);
+    // （ブレンドは呼び出し側が必要なら上書きします）
+}
+
 
 
 

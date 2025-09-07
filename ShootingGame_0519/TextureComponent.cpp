@@ -23,7 +23,7 @@ bool TextureComponent::LoadTexture(const std::wstring& filepath)
 
 void TextureComponent::Initialize() {}
 
-void TextureComponent::Draw()
+void TextureComponent::Draw(float alpha)
 {
     if (!m_TextureSRV) return;
 
