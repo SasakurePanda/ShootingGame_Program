@@ -7,11 +7,12 @@
 #include "CameraObject.h"
 #include "Enemy.h"
 #include "TextureComponent.h"
-//#include "EnemyTurretComponent.h"
+#include "DebugRenderer.h"
 #include "Reticle.h"
 #include "SkyDome.h"
 #include "Bullet.h"
 #include "TitleBackGround.h"
+#include "DebugUI.h"
 
 //---------------------------------
 //ISceneを継承したGameScene
@@ -29,6 +30,12 @@ public:
 	void Init() override;
 	//終了関数
 	void Uninit() override;
+
+	//モード変更用関数
+	void DebugCollisionMode();
+
+	//モード変更用関数
+	void DebugSetPlayerSpeed();
 	
 	//オブジェクトの追加要求関数
 	void AddObject(std::shared_ptr<GameObject> obj) override;
@@ -48,6 +55,8 @@ public:
 	const std::vector<std::shared_ptr<GameObject>>& GetObjects() const override { return m_GameObjects; }
 
 private:
+	std::unique_ptr<DebugRenderer> m_debugRenderer;
+
 	std::shared_ptr<Player> m_player;
 	std::shared_ptr<CameraObject> m_FollowCamera;
 	std::shared_ptr<SkyDome> m_SkyDome;
@@ -85,4 +94,8 @@ private:
 	}
 
 	std::shared_ptr<Reticle> m_reticle;
+
+	bool isCollisionDebugMode = false;
+
+	float setSpeed = 10.0f;
 };

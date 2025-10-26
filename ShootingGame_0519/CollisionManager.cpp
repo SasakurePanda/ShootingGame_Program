@@ -192,7 +192,8 @@ void CollisionManager::DebugDrawAllColliders(DebugRenderer& dr)
                 center.x, center.y, center.z, fullSize.x, fullSize.y, fullSize.z);
             OutputDebugStringA(buf);
 
-            dr.AddBox(center, halfSize, Matrix::Identity, color);
+            fullSize = halfSize * 2.0f;
+            dr.AddBox(center, fullSize, Matrix::Identity, color);
         }
         else // OBB
         {

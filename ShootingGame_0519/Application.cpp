@@ -4,9 +4,14 @@
 #include "renderer.h"
 #include "DebugGlobals.h"
 #include "TransitionManager.h"
+#include "system/imgui/imgui_impl_win32.h"
 
 constexpr auto ClassName  = TEXT("2025 就職作品 ");         //ウィンドウクラス名.
 constexpr auto WindowName = TEXT("2025 就職作品 ");        //ウィンドウ名.
+
+
+// ImGuiのWin32プロシージャハンドラ(マウス対応)
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 //-----------------------------------------------------------------------------
 // Class Static
@@ -18,7 +23,7 @@ uint32_t   Application::m_Height;       //ウィンドウの縦幅です.
 float      Application::m_DeltaTime;
 
 //ImGuiのWin32プロシージャハンドラ(マウス対応)
-//extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 void Application::Run()
 {
@@ -221,6 +226,9 @@ void Application::ShowCursorAndRelease()
 // ウィンドウプロシージャ
 LRESULT CALLBACK Application::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
+        return true;
+
     switch (message)
     {
     case WM_DESTROY:       //ウィンドウが消える時

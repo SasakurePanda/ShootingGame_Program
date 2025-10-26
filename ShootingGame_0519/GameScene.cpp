@@ -12,8 +12,52 @@
 #include "PatrolComponent.h"
 #include "CircularPatrolComponent.h"
 
+void GameScene::DebugCollisionMode()
+{
+    static int selected = 0;
+
+    ImGui::Begin("Collision Debug Mode Select");
+
+    ImGui::RadioButton("OnDebug Mode", &selected, 0);
+    ImGui::RadioButton("NoDebug Mode", &selected, 1);
+
+    ImGui::End();
+
+    if (selected == 0)
+    {
+        isCollisionDebugMode = true;
+    }
+    else
+    {
+        isCollisionDebugMode = false;
+    }
+}
+
+void GameScene::DebugSetPlayerSpeed()
+{
+    ImGui::Begin("DebugPlayerSpeed");
+
+    static float speed = 10.0f;
+    
+    ImGui::SliderFloat("PlayerSpeed", &speed, 0.1f, 35.0f);
+
+    setSpeed = speed;
+
+    ImGui::End();
+}
+
 void GameScene::Init()
 {    
+    // デバッグMODE SELECT
+    DebugUI::RedistDebugFunction([this]() {DebugCollisionMode();});
+
+    DebugUI::RedistDebugFunction([this]() {DebugSetPlayerSpeed();});
+
+        // 既存 Init の先頭あたりで一度だけ初期化
+    m_debugRenderer = std::make_unique<DebugRenderer>();
+    m_debugRenderer->Initialize(Renderer::GetDevice(), Renderer::GetDeviceContext(),
+        L"DebugLineVS.cso", L"DebugLinePS.cso");
+
     //-----------------------スカイドーム作成-------------------------------
     m_SkyDome = std::make_shared<SkyDome>("Asset/SkyDome/SkyDome_02.png");
     m_SkyDome->Initialize();
@@ -36,6 +80,10 @@ void GameScene::Init()
     auto model = std::make_shared<ModelComponent>();
     model->LoadModel("Asset/Model/Robot/uploads_files_3862208_Cube.fbx");
     enemy->AddComponent(model);
+
+    auto col = std::make_shared<OBBColliderComponent>();
+    col->SetSize({ 2.0f,2.0f,2.0f });
+    enemy->AddComponent(col);
 
     // 巡回コンポーネントを追加
     auto patrol = std::make_shared<PatrolComponent>();
@@ -63,7 +111,7 @@ void GameScene::Init()
     model->LoadModel("Asset/Model/Robot/uploads_files_3862208_Cube.fbx");
     circEnemy->AddComponent(model);
 
-    auto col = std::make_shared<OBBColliderComponent>();
+    col = std::make_shared<OBBColliderComponent>();
     col->SetSize({ 2.0f,2.0f,2.0f });
     circEnemy->AddComponent(col);
 
@@ -141,6 +189,8 @@ void GameScene::Update(float deltatime)
     //新規オブジェクトをGameSceneのオブジェクト配列に追加する
     SetSceneObject();
 
+    auto PlayerMove = m_player->GetComponent<MoveComponent>();
+    PlayerMove->SetSpeed(setSpeed);
     //----------------- レティクルのドラッグ処理 -----------------
     if (Input::IsMouseLeftPressed())
     {
@@ -228,6 +278,43 @@ void GameScene::Draw(float deltatime)
         Vector2 size(m_reticleW, m_reticleH);
         Renderer::DrawReticle(m_reticleTex->GetSRV(), m_lastDragPos, size);
     }
+
+
+    if (isCollisionDebugMode)
+    {
+        if (m_debugRenderer && m_FollowCamera && m_FollowCamera->GetCameraComponent())
+        {
+            auto camComp = m_FollowCamera->GetCameraComponent();
+            Matrix view = camComp->GetView();
+            Matrix proj = camComp->GetProj();
+
+            // 各オブジェクトのコライダーを登録
+            for (auto& obj : m_GameObjects)
+            {
+                if (!obj) continue;
+                auto col = obj->GetComponent<ColliderComponent>();
+                if (!col) continue;
+
+                // 色（当たっているなら赤、そうでなければ緑半透明）
+                bool hit = col->IsHitThisFrame();
+                Vector4 color = hit ? Vector4(1, 0, 0, 1) : Vector4(0, 1, 0, 0.6f);
+
+                // center / size / rotation を取得
+                Vector3 center = col->GetCenter();
+                Vector3 size = col->GetSize();          // ** full size を期待 **
+                Matrix rot = col->GetRotationMatrix(); // AABB は Identity を返すように実装済み
+
+                // DebugRenderer::AddBox は size が fullSize を期待します（内部で 0.5 をかける）
+                m_debugRenderer->AddBox(center, size, rot, color);
+            }
+
+            // 描画（内部で Clear しているので AddBox は毎フレーム呼ぶ）
+            m_debugRenderer->Draw(m_FollowCamera->GetCameraComponent()->GetView(),
+                m_FollowCamera->GetCameraComponent()->GetProj());
+        }
+
+    }
+    
 }
 
 

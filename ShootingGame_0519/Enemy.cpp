@@ -25,7 +25,7 @@ void Enemy::OnCollision(GameObject* other)
     //‘Šè‚ª’e‚©‚Ç‚¤‚©
     if (auto bulletComp = other->GetComponent<BulletComponent>()) 
     {
-        if (bulletComp->GetBulletType() == BulletComponent::BulletType::ENEMY)
+        if (bulletComp->GetBulletType() == BulletComponent::BulletType::PLAYER)
         { 
             // Player’e‚É“–‚½‚Á‚½‚ç‚»‚ÌEnemy‚à’e‚àíœ
             if (auto scene = GetScene())
