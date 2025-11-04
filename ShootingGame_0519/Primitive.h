@@ -30,9 +30,12 @@ public:
     void CreateSphere(ID3D11Device* device, float radius, int sliceCount, int stackCount);
 
     //箱を生成する関数
-    void CreateBox(ID3D11Device* device, float width, float height, float depth);
+    void CreateBox   (ID3D11Device* device, float width, float height, float depth);
 
-    //
+    //板を生成する関数
+    void CreatePlane(ID3D11Device* device,float width, float depth,int subdivisionsX = 1, int subdivisionsZ = 1,const DirectX::XMFLOAT4& color = { 1,1,1,1 },bool generateUVs = true);
+
+    //描画
     void Draw(ID3D11DeviceContext* context);
 
     
@@ -41,8 +44,8 @@ private:
     std::vector<Vertex> vertices;   //頂点情報を保持する動的配列
     std::vector<uint32_t> indices;  //インデックス情報（頂点の接続順）
 
-    ID3D11Buffer* vertexBuffer; //頂点バッファ（GPU用）
-    ID3D11Buffer* indexBuffer;  //インデックスバッファ（GPU用）
+    ID3D11Buffer* vertexBuffer = nullptr; //頂点バッファ（GPU用）
+    ID3D11Buffer* indexBuffer  = nullptr;  //インデックスバッファ（GPU用）
 
     //頂点バッファとインデックスバッファを作成する関数
     void CreateBuffers(ID3D11Device* device);

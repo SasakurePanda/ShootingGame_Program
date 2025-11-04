@@ -1,4 +1,5 @@
 #include "Primitive.h"
+#include <iostream>
 
 void Primitive::CreateSphere(ID3D11Device* device, float radius, int sliceCount, int stackCount)
 {
@@ -78,43 +79,123 @@ void Primitive::CreateBox(ID3D11Device* device, float width, float height, float
     CreateBuffers(device);
 }
 
+void Primitive::CreatePlane(ID3D11Device* device, float width, float depth, int sx, int sz, const XMFLOAT4& color, bool genUV)
+{
+    vertices.clear();
+    indices.clear();
+
+    float widthHalf = width * 0.5f;
+    float depthHalf = depth * 0.5f;
+
+    vertices.push_back({ XMFLOAT3(-widthHalf, 0.0f, -depthHalf), XMFLOAT3(0, 1, 0), XMFLOAT4(1,1,1,1), XMFLOAT2(0.0f, 0.0f) }); // 左上
+    vertices.push_back({ XMFLOAT3( widthHalf, 0.0f, -depthHalf), XMFLOAT3(0, 1, 0), XMFLOAT4(1,1,1,1), XMFLOAT2(1.0f, 0.0f) }); // 右上
+    vertices.push_back({ XMFLOAT3( widthHalf, 0.0f,  depthHalf), XMFLOAT3(0, 1, 0), XMFLOAT4(1,1,1,1), XMFLOAT2(1.0f, 1.0f) }); // 右下
+    vertices.push_back({ XMFLOAT3(-widthHalf, 0.0f,  depthHalf), XMFLOAT3(0, 1, 0), XMFLOAT4(1,1,1,1), XMFLOAT2(0.0f, 1.0f) }); // 左下
+
+    //三角形をふたつ使って作成
+    //インデックス設定
+    uint32_t planeIndices[] =
+    {
+        0, 1, 2,
+        0, 2, 3
+    };
+
+    indices.assign(planeIndices, planeIndices + sizeof(planeIndices) / sizeof(uint32_t));
+
+    //GPU バッファ作成
+    CreateBuffers(device);
+}
+
 void Primitive::CreateBuffers(ID3D11Device* device)
 {
-    // 頂点バッファ作成
-    D3D11_BUFFER_DESC bufferDesc = {};
-    bufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    bufferDesc.ByteWidth = sizeof(Vertex) * vertices.size();
-    bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    // safety checks
+    if (!device)
+    {
+        OutputDebugStringA("Primitive::CreateBuffers - device is null\n");
+        return;
+    }
+    if (vertices.empty() || indices.empty())
+    {
+        char buf[256];
+        sprintf_s(buf, "Primitive::CreateBuffers - empty verts=%zu idx=%zu\n", vertices.size(), indices.size());
+        OutputDebugStringA(buf);
+        return;
+    }
 
-    D3D11_SUBRESOURCE_DATA initData = {};
-    initData.pSysMem = vertices.data();
+    // release old buffers if any
+    if (vertexBuffer) { vertexBuffer->Release(); vertexBuffer = nullptr; }
+    if (indexBuffer) { indexBuffer->Release();  indexBuffer = nullptr; }
 
-    device->CreateBuffer(&bufferDesc, &initData, &vertexBuffer);
+    // Vertex buffer
+    D3D11_BUFFER_DESC vbDesc{};
+    vbDesc.Usage = D3D11_USAGE_DEFAULT;
+    vbDesc.ByteWidth = UINT(sizeof(Vertex) * vertices.size());
+    vbDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    vbDesc.CPUAccessFlags = 0;
+    D3D11_SUBRESOURCE_DATA vbData{};
+    vbData.pSysMem = vertices.data();
+    HRESULT hr = device->CreateBuffer(&vbDesc, &vbData, &vertexBuffer);
+    if (FAILED(hr) || !vertexBuffer) {
+        char buf[256];
+        sprintf_s(buf, "Primitive::CreateBuffers - CreateBuffer(VB) failed hr=0x%08X\n", static_cast<unsigned int>(hr));
+        OutputDebugStringA(buf);
+        if (vertexBuffer) { vertexBuffer->Release(); vertexBuffer = nullptr; }
+        return;
+    }
 
-    // インデックスバッファ作成
-    bufferDesc.ByteWidth = sizeof(uint32_t) * indices.size();
-    bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    initData.pSysMem = indices.data();
-
-    device->CreateBuffer(&bufferDesc, &initData, &indexBuffer);
+    // Index buffer (uint32 assumed)
+    D3D11_BUFFER_DESC ibDesc{};
+    ibDesc.Usage = D3D11_USAGE_DEFAULT;
+    ibDesc.ByteWidth = UINT(sizeof(uint32_t) * indices.size());
+    ibDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    ibDesc.CPUAccessFlags = 0;
+    D3D11_SUBRESOURCE_DATA ibData{};
+    ibData.pSysMem = indices.data();
+    hr = device->CreateBuffer(&ibDesc, &ibData, &indexBuffer);
+    if (FAILED(hr) || !indexBuffer) {
+        char buf[256];
+        sprintf_s(buf, "Primitive::CreateBuffers - CreateBuffer(IB) failed hr=0x%08X\n", static_cast<unsigned int>(hr));
+        OutputDebugStringA(buf);
+        if (indexBuffer) { indexBuffer->Release(); indexBuffer = nullptr; }
+        // We keep vertexBuffer valid (or release it depending on semantics)
+        return;
+    }
 
     char buf[256];
-    sprintf_s(buf, "Primitive buffers: verts=%zu idx=%zu vb=%p ib=%p\n",
+    sprintf_s(buf, "Primitive::CreateBuffers OK verts=%zu idx=%zu vb=%p ib=%p\n",
         vertices.size(), indices.size(), vertexBuffer, indexBuffer);
     OutputDebugStringA(buf);
 }
 
+
 void Primitive::Draw(ID3D11DeviceContext* context)
 {
-    if (!vertexBuffer || !indexBuffer)
-    {
+    if (!context) {
+        OutputDebugStringA("Primitive::Draw - context is null\n");
+        return;
+    }
+    if (!vertexBuffer || !indexBuffer) {
         OutputDebugStringA("Primitive::Draw - missing VB or IB\n");
+        return;
+    }
+    if (indices.empty()) {
+        OutputDebugStringA("Primitive::Draw - indices empty\n");
         return;
     }
 
     UINT stride = sizeof(Vertex);
     UINT offset = 0;
-    context->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+    // set vertex buffer
+    ID3D11Buffer* vbs[1] = { vertexBuffer };
+    context->IASetVertexBuffers(0, 1, vbs, &stride, &offset);
+
+    // set index buffer
     context->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-    context->DrawIndexed(indices.size(), 0, 0);
+
+    // primitive topology (optional: ensure it is trianglelist)
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    UINT indexCount = static_cast<UINT>(indices.size());
+    context->DrawIndexed(indexCount, 0, 0);
 }
+
