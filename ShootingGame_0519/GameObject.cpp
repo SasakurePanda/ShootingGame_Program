@@ -12,7 +12,6 @@ void GameObject::Update(float dt)
 {
     m_prevTransform = m_transform;
 
-    //各コンポーネントへ固定ステップdtを渡す
     for (auto& comp : m_components)
     {
         comp->Update(dt);
@@ -25,6 +24,22 @@ void GameObject::Draw(float alpha)
     {
         comp->Draw(alpha);
     }
+}
+
+void GameObject::Uninit()
+{
+    if (m_uninitialized) { return; }// 二重解放防止
+    m_uninitialized = true;
+
+    for (auto& comp : m_components)
+    {
+        if (comp)
+        {
+            comp->Uninit();
+        }
+    }
+
+    m_components.clear();
 }
 
 void GameObject::AddComponent(std::shared_ptr<Component> comp) 

@@ -18,6 +18,7 @@ public:
     virtual void Initialize();
     virtual void Update(float dt);   
     virtual void Draw(float alpha); 
+    virtual void Uninit();
 
     template<typename T, typename... Args>
     std::shared_ptr<T> AddComponent(Args&&... args)
@@ -73,6 +74,7 @@ public:
 
 private:
     std::vector<std::shared_ptr<Component>> m_components;
+    bool m_uninitialized = false;
     SRT m_transform;
     Vector3 m_localPosition; // 現在ある位置
     GameObject* m_parent = nullptr; // 親オブジェクト（親がいない場合は nullptr）]

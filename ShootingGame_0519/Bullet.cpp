@@ -38,6 +38,8 @@ void Bullet::Update(float dt)
 
 void Bullet::Draw(float alpha)
 {
+    std::cout << "Bullet::Draw called" << std::endl;
+
     //ワールド行列セット
     Matrix4x4 world = GetTransform().GetMatrix();
     Renderer::SetWorldMatrix(&world);
@@ -119,17 +121,17 @@ void Bullet::OnCollision(GameObject* other)
     if (!other) return;
 
     //Enemyに衝突したら両方消す(他の弾やプレイヤーとは別扱いに)
-    if (dynamic_cast<Enemy*>(other))
-    {
-        IScene* scene = GetScene();
-        if (scene)
-        {
-            std::cout << "Enemyに衝突したためBulletを削除します " << std::endl;
-            scene->RemoveObject(this);
-            scene->RemoveObject(other);
-        }
+    //if (dynamic_cast<Enemy*>(other))
+    //{
+    //    IScene* scene = GetScene();
+    //    if (scene)
+    //    {
+    //        std::cout << "Enemyに衝突したためBulletを削除します " << std::endl;
+    //        scene->RemoveObject(this);
+    //        scene->RemoveObject(other);
+    //    }
 
-        //SceneManager::SetCurrentScene("ResultScene");
-    }
+    //    //SceneManager::SetCurrentScene("ResultScene");
+    //}
 }
 

@@ -6,6 +6,7 @@ using namespace DirectX::SimpleMath;
 
 void CirculPatrolComponent::Initialize()
 {
+    //”¼Œa‚ª‚æ‚è¬‚³‚¢‚È‚ç
     if (m_Radius <= 0.0f)
     {
         return;
