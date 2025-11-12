@@ -29,6 +29,9 @@ public:
     void SetSensitivity(float s) { m_Sensitivity = s; }
     float GetSensitivity() const { return m_Sensitivity; }
 
+    // ブースト状態通知（MoveComponent から呼ばれる）
+    void SetBoostState(bool isBoosting) override;
+
     Matrix GetView() const { return m_ViewMatrix; }
     Matrix GetProj() const { return m_ProjectionMatrix; }
 
@@ -83,12 +86,28 @@ private:
     Vector3 m_LookTarget = Vector3::Zero;
 
     // --- 追加メンバ: レティクルに応じたカメラの横シフト量（チューニング用） ---
-    float m_ScreenOffsetScale = 8.0f; // 画面幅 1.0 正規化あたりのワールド単位換算（調整可）
-    float m_MaxScreenOffset = 200.0f;  // 最大シフト（ワールド単位）
+    float m_ScreenOffsetScale = 16.0f; // 画面幅 1.0 正規化あたりのワールド単位換算（調整可）
+    float m_MaxScreenOffset = 20.0f;  // 最大シフト（ワールド単位）
 
     float m_PrevPlayerYaw = 0.0f;
-    float m_TurnOffsetScale = 4.0f;   // yawSpeed -> ワールド横オフセット換算（調整用）
-    float m_TurnOffsetMax = 6.0f;     // オフセット最大値（ワールド単位）
+    float m_TurnOffsetScale = 8.0f;   // yawSpeed -> ワールド横オフセット換算（調整用）
+    float m_TurnOffsetMax = 12.0f;     // オフセット最大値（ワールド単位）
     float m_CurrentTurnOffset = 0.0f; // 現在の横オフセット（滑らかに更新）
-    float m_TurnOffsetLerp = 8.0f;    // オフセットが変化するときの滑らかさ（大きいと即時）
+    float m_TurnOffsetLerp = 6.0f;    // オフセットが変化するときの滑らかさ（大きいと即時）
+
+
+    // -----------------ブースト関連の変数------------------------
+   // --- ブースト制御用メンバ ---
+    bool m_boostRequested = false;   // 現在ボタンでブースト要求中か（MoveComponent から SetBoostState）
+    float m_boostBlend = 0.0f;       // 0..1 の補間値（0 = 通常追随, 1 = ブースト時の遅追従）
+    float m_boostBlendSpeed = 6.0f;  // ブレンドの速さ
+
+    // ブースト時の目標値（チューニング）
+    float m_boostedStiffness = 6.0f;
+    float m_boostedDamping = 3.0f;
+    float m_boostAimDistanceAdd = 8.0f; // ブースト時、注視距離を伸ばす（＝カメラが後ろに残る印象）
+
+    // 通常のバネパラメータ（FollowCameraComponent コンストラクタで設定）
+    float m_normalStiffness = 12.0f;
+    float m_normalDamping = 6.0f;
 };

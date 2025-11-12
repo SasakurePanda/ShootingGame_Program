@@ -109,7 +109,7 @@ private:
 
 	float setSpeed = 10.0f;
 
-	float setOffset = -50.0;
+	Vector3 setRot = { 0,0,0 };
 
 	int enemyCount = 0;
 };

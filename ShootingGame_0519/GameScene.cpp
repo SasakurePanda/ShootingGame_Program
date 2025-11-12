@@ -40,10 +40,18 @@ void GameScene::DebugSetPlayerSpeed()
     ImGui::Begin("DebugPlayerSpeed");
 
     static float speed = 25.0f;
+
+    static Vector3 Rot = { 0,0,0 };
     
     ImGui::SliderFloat("PlayerSpeed", &speed, 0.1f, 75.0f);
 
+    ImGui::SliderFloat("PlayerRotX", &Rot.x, -180.0f, 180.0f);
+    ImGui::SliderFloat("PlayerRotY", &Rot.y, -180.0f, 180.0f);
+    ImGui::SliderFloat("PlayerRotZ", &Rot.z, -180.0f, 180.0f);
+
     setSpeed = speed;
+
+    setRot = Rot;
 
     ImGui::End();
 }
@@ -63,22 +71,22 @@ void GameScene::Init()
     //--------------------------プレイヤー作成---------------------------------
     m_player = std::make_shared<Player>();
     m_player->SetPosition({ 0.0f, 0.0f, 0.0f });
-    m_player->SetRotation({ 0.0f,0.0f,0.0f });
+    m_player->SetRotation({ 80.0,0.0,0.0 });
     m_player->SetScale({ 0.3f, 0.3f, 0.3f });
     m_player->Initialize();
     auto moveComp = m_player->GetComponent<MoveComponent>();
 
     auto playAreaComp = std::make_shared<PlayAreaComponent>();
 
-    playAreaComp->SetMinY(-10.0f);
-    playAreaComp->SetMaxY( 50.0f);
-    moveComp->SetPlayArea(playAreaComp.get());
+    /*playAreaComp->SetMinY(-3.5f);
+    playAreaComp->SetMaxY(20.0f);
+    moveComp->SetPlayArea(playAreaComp.get());*/
 
     //-------------------------敵生成--------------------------------
     m_enemySpawner = std::make_unique<EnemySpawner>(this);
-    m_enemySpawner->patrolCfg.spawnCount = 2;
-    m_enemySpawner->circleCfg.spawnCount = 2;
-    m_enemySpawner->turretCfg.spawnCount = 1;
+    m_enemySpawner->patrolCfg.spawnCount = 1;
+    m_enemySpawner->circleCfg.spawnCount = 0;
+    m_enemySpawner->turretCfg.spawnCount = 0;
 
     enemyCount = m_enemySpawner->patrolCfg.spawnCount + m_enemySpawner->circleCfg.spawnCount + m_enemySpawner->turretCfg.spawnCount;
 
@@ -115,8 +123,8 @@ void GameScene::Init()
 
     //------------------スカイドーム作成-------------------------
 
-    /*m_SkyDome = std::make_shared<SkyDome>("Asset/SkyDome/SkyDome_02.png");
-    m_SkyDome->Initialize();*/
+    m_SkyDome = std::make_shared<SkyDome>("Asset/SkyDome/SkyDome_03.png");
+    m_SkyDome->Initialize();
 
     //-----------------------床制作------------------------------
 
@@ -138,7 +146,7 @@ void GameScene::Init()
 
     m_buildingSpawner = std::make_unique<BuildingSpawner>(this);
     BuildingConfig bc;
-    bc.modelPath = "Asset/Build/rocks_01_model.obj";
+    bc.modelPath = "Asset/Build/wooden watch tower2.obj";
     bc.count = 1;
     bc.areaWidth = 20.0f;
     bc.areaDepth = 20.0f;
@@ -184,12 +192,12 @@ void GameScene::Init()
         shootComp->SetCamera(cameraComp.get());
     }
 
-    //if (cameraComp)
-    //{
-    //    m_SkyDome->SetCamera(cameraComp.get()); //ICameraViewProvider* を受け取る場合
-    //}
+    if (cameraComp)
+    {
+        m_SkyDome->SetCamera(cameraComp.get()); //ICameraViewProvider* を受け取る場合
+    }
 
-    //m_GameObjects.insert(m_GameObjects.begin(), m_SkyDome);
+    m_GameObjects.insert(m_GameObjects.begin(), m_SkyDome);
 
     m_FollowCamera->GetCameraComponent()->SetTarget(m_player.get());
 
@@ -215,47 +223,17 @@ void GameScene::Update(float deltatime)
     //新規オブジェクトをGameSceneのオブジェクト配列に追加する
     SetSceneObject();
 
-    if (!m_player)
+    if (m_player)
     {
-        std::cout << "プレイヤーが発見できませんでした" << m_player << std::endl;
-    }
-    else
-    {
-        std::cout << "プレイヤーが発見されました m_player ptr = " << m_player << std::endl;
-
-        auto pos = m_player->GetPosition();
-        if (!std::isfinite(pos.x) || !std::isfinite(pos.y) || !std::isfinite(pos.z))
-        {
-            std::cout << "DEBUG: player pos is not finite" << std::endl;
-            std::cout << "Playerの位置" << "X = " << pos.x << " , Y = " << pos.y << " , Z = " << pos.z << std::endl;
-        }
-        else
-        {
-            std::cout << "DEBUG: player pos" << std::endl;
-            std::cout << "Playerの位置" << "X = " << pos.x << " , Y = " << pos.y << " , Z = " << pos.z << std::endl;
-        }
+        //m_player->SetRotation(setRot);
     }
 
     auto PlayerMove = m_player->GetComponent<MoveComponent>();
     if (PlayerMove)
     {
-        /*PlayerMove->SetSpeed(setSpeed);
-        Vector3 pos = m_player->GetPosition();*/
-        std::cout << "MoveComponent起動中です" << std::endl;
-
-    }
-    else
-    {
-        std::cout << "MoveComponentクラスが見つかりません" << std::endl;
+        PlayerMove->SetSpeed(setSpeed);
     }
 
-
-  /*  auto cameraMove = m_FollowCamera->GetComponent<FollowCameraComponent>();
-    if (cameraMove)
-    {
-        cameraMove->SetLookTargetScreenOffsetScale(setOffset);
-    }*/
-   
     //----------------- レティクルのドラッグ処理 -----------------
     if (Input::IsMouseLeftPressed())
     {
