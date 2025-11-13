@@ -13,7 +13,7 @@ using namespace DirectX::SimpleMath;
 
 static bool GetMousePickRay(ICameraViewProvider* cam, const POINT& mousePos, SMS::Vector3& outNear, SMS::Vector3& outFar)
 {
-    // 基本チェック
+    //
     if (!cam)
     {
         std::cout << "GetMousePickRay: cam is null\n";
@@ -202,21 +202,17 @@ void ShootingComponent::Update(float dt)
     if (!wantFire) return;
 
     // クールダウン管理
-    if (m_timer < m_cooldown) return;
+    if (m_timer < m_cooldown) { return; }
 
-    // --- 発射準備 ---
-    // 1) 発射方向を決める（優先順位: AimPoint -> AimDirectionFromReticle -> カメラ前方 -> オーナー前方）
     Vector3 aimDir = Vector3::Forward;
     bool haveAimDir = false;
 
     if (m_camera)
     {
-        // できればカメラの AimPoint を使って、発射点から AimPoint へ向かう方向を計算するのが自然
         Vector3 aimPoint = m_camera->GetAimPoint();
         Vector3 spawnBase;
         Vector3 forward = owner->GetForward();
 
-        // if 文による分岐（三項演算子の代替）
         if (forward.LengthSquared() > 1e-6f)
         {
             forward.Normalize();

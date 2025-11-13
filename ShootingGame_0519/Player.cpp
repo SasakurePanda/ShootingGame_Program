@@ -11,10 +11,10 @@ void Player::Initialize()
 
     //移動コンポーネントの生成
     auto moveComp = std::make_shared<MoveComponent>();
+    moveComp->Initialize();
 
     //弾発射コンポーネントの生成
     auto shootComp = std::make_shared<ShootingComponent>();
-    //shootComp->SetBulletSpeed(80);
 
     //コライダーコンポーネントの生成
     m_Collider  = std::make_shared<OBBColliderComponent>();
@@ -29,8 +29,6 @@ void Player::Initialize()
         modelComp->SetColor(Color(1.0f, 0.0f, 0.0f, 1.0f));
     }
 
-    SetRotation(DirectX::SimpleMath::Vector3(14.5,0.0,3.1));
-   
   //---------------GameObjectに追加---------------
     AddComponent(modelComp);
     AddComponent(moveComp);
@@ -46,12 +44,11 @@ void Player::Update(float dt)
 {
     //コンポーネント等のUpdate
     GameObject::Update(dt);
-
 }
 
 void Player::OnCollision(GameObject* other)
 {
-    if (!other) return;
+    if (!other) { return; }
     //相手が弾かどうか
     if (auto bc = other->GetComponent<BulletComponent>()) 
     {
