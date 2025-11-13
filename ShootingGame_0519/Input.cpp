@@ -52,9 +52,9 @@ bool Input::IsKeyDown(unsigned char key)
 }
 
 // Input.cpp
-bool Input::IsKeyPressed(int keyCode)
+bool Input::IsKeyPressed(unsigned char key)
 {
-    return (GetAsyncKeyState(keyCode) & 0x8000) != 0;
+    return ((m_CurrentKeys[key] & 0x80) != 0) && ((m_PreviousKeys[key] & 0x80) == 0);
 }
 
 POINT Input::GetMouseDelta()

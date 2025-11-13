@@ -8,7 +8,7 @@ public:
 
     // キーボード
     static bool IsKeyDown(unsigned char key);
-    static bool IsKeyPressed(int keyCode);//前フレームとの差分を見る
+    static bool IsKeyPressed(unsigned char key);//前フレームとの差分を見る
 
     //---------------------------マウス系処理---------------------------
     //マウスの移動量を計算する関数
