@@ -13,6 +13,7 @@
 #include "Bullet.h"
 #include "TitleBackGround.h"
 #include "DebugUI.h"
+#include "HPBar.h"
 #include "EnemySpawner.h"
 #include "BuildingSpawner.h"
 #include "PlayAreaComponent.h"
@@ -92,6 +93,7 @@ private:
 
 	 // --- レティクル関係 ---
 	std::shared_ptr<GameObject> m_reticleObj;           // レティクル用 GameObject（描画のみでコンポーネント持つ）
+	std::shared_ptr<HPBar> m_HPObj;           // レティクル用 GameObject（描画のみでコンポーネント持つ）
 	std::shared_ptr<TextureComponent> m_reticleTex;     // レティクルのテクスチャコンポーネント
 
 	bool m_isDragging = false;      // ドラッグ中フラグ

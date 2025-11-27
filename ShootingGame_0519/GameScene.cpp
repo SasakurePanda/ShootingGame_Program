@@ -304,7 +304,7 @@ void GameScene::Init()
     m_buildingSpawner = std::make_unique<BuildingSpawner>(this);
     BuildingConfig bc;
     bc.modelPath = "Asset/Build/Rock1.obj";
-    bc.count = 3;
+    bc.count = 4;
     bc.areaWidth = 320.0f;
     bc.areaDepth = 320.0f;
     bc.spacing = 20.0f;
@@ -326,8 +326,9 @@ void GameScene::Init()
     float y = (rc.bottom - rc.top) / 2;
     m_reticle->Initialize();
     
-    auto HPbar = std::make_shared<TitleBackGround>(L"Asset/UI/HPBar.png", 1280); 
-    HPbar->Initialize();
+	//--------------------------HPバー作成-------------------------------------
+	auto hpUI = std::make_shared<HPBar>(L"Asset/UI/HPBar01.png", L"Asset/UI/HPGauge01.png", 100.0f, 475.0f);
+    hpUI->Initialize();
 
     //------------------------------追尾カメラ作成---------------------------------
     m_FollowCamera = std::make_shared<CameraObject>();
@@ -360,11 +361,42 @@ void GameScene::Init()
         cameraComp->SetDistance(15.0f);
     }
 
-    if (auto hp = m_player->GetComponent<HitPointComponent>())
+
+    // 弱参照を作る（ラムダ内で lock して使う）
+    std::weak_ptr<HPBar> wHpUI = hpUI;
+
+    // cameraComp が生ポインタ（raw）ならそのままキャプチャして良い。
+    // cameraComp が shared_ptr なら同様に weak_ptr にしておくのが安全。
+    auto hp = m_player->GetComponent<HitPointComponent>();
+    if (hp)
     {
-        hp->SetOnDamaged([cameraComp](const DamageInfo& info)
+        std::weak_ptr<HitPointComponent> wPlayerHP = hp;
+        std::weak_ptr<HPBar> wHpUI = hpUI;
+
+
+        hp->SetOnDamaged([wHpUI, wPlayerHP, cameraComp](const DamageInfo& info)
             {
-                cameraComp->Shake(3.0f, 0.5f);
+                // カメラシェイク（cameraComp が raw pointer なら null チェック）
+                if (cameraComp)
+                {
+                    cameraComp->Shake(7.5f, 0.5f , FollowCameraComponent::ShakeMode::Horizontal);
+                }
+
+                // HPUI 更新：まず weak -> shared にする
+                if (auto bar = wHpUI.lock())
+                {
+                    if (auto playerHP = wPlayerHP.lock())
+                    {
+                        // HitPointComponent 側に GetHP/GetMaxHP があれば使う
+                        float cur = playerHP->GetHP();
+                        float max = playerHP->GetMaxHP();
+                        bar->SetHP(cur, max);
+                    }
+                    else
+                    {
+                        // 万が一 playerHP が無ければ DamageInfo に current/max が入っていれば使う
+                    }
+                }
             });
     }
 
@@ -376,6 +408,7 @@ void GameScene::Init()
 
     //AddTextureObject(HPbar);
     AddTextureObject(m_reticle);
+    AddTextureObject(hpUI);
 
     AddObject(m_player);
     AddObject(m_FollowCamera);

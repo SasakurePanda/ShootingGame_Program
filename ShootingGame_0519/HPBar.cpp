@@ -4,51 +4,94 @@
 #include "Application.h"
 #include <Windows.h>
 
-HPBar::HPBar(const std::wstring& texturePath, float size)
-    : m_texturePath(texturePath), m_size(size)
+HPBar::HPBar(const std::wstring& framePath, const std::wstring& gaugePath, float width, float height)
+    : m_framePath(framePath)
+    , m_gaugePath(gaugePath)
+    , m_width(width)
+    , m_height(height)
 {
-    m_pos = Vector2(0.0f, 0.0f);
 }
 
 void HPBar::Initialize()
 {
-    //panda_iruka_irowake_iruka.png
-    // 自分のコンポーネントとして TextureComponent を作る
-    m_texture = AddComponent<TextureComponent>();
-    if (!m_texture)
+    // TextureComponent を自分のコンポーネントとして作る
+    m_frameTex = AddComponent<TextureComponent>();
+    m_gaugeTex = AddComponent<TextureComponent>();
+
+    if (!m_frameTex || !m_gaugeTex)
     {
-        OutputDebugStringA("Reticle: TextureComponent 作成失敗\n");
+        OutputDebugStringA("HPBar: TextureComponent 作成失敗\n");
         return;
     }
 
-    // テクスチャ読み込み（ワーキングディレクトリに依存）
-    if (!m_texture->LoadTexture(m_texturePath))
+    if (!m_frameTex->LoadTexture(m_framePath))
     {
-        OutputDebugStringA("Reticle: テクスチャ読み込み失敗\n");
+        OutputDebugStringA("HPBar: frame 読込失敗\n");
     }
 
-    RECT rc{};
-    GetClientRect(Application::GetWindow(), &rc);
-    m_pos.x = static_cast<float>((rc.right - rc.left) / 2);
-    m_pos.y = static_cast<float>((rc.bottom - rc.top) / 2);
+    if (!m_gaugeTex->LoadTexture(m_gaugePath))
+    {
+        OutputDebugStringA("HPBar: gauge 読込失敗\n");
+    }
 
-    m_texture->SetScreenPosition(100, 300);
+    // 初期レイアウト反映
+    UpdateLayout();
+}
+
+void HPBar::SetHP(float current, float max)
+{
+    m_currentHP = current;
+    if (max > 0.0f) 
+    {
+        m_maxHP = max;
+    }
+    else 
+    {
+        m_maxHP = 1.0f;
+    }
+
+    m_targetRatio = std::clamp(m_currentHP / m_maxHP, 0.0f, 1.0f);
 }
 
 void HPBar::Update(float dt)
 {
+    if (std::abs(m_ratio - m_targetRatio) > 1e-4f)
+    {
+        float t = std::clamp(m_lerpSpeed * dt, 0.0f, 1.0f);
+        m_ratio = m_ratio + (m_targetRatio - m_ratio) * t;
+        UpdateLayout();
+    }
+}
 
+void HPBar::UpdateLayout()
+{
+    if (m_frameTex)
+    {
+        m_frameTex->SetScreenPosition(m_pos.x, m_pos.y);
+        m_frameTex->SetSize(m_width, m_height);
+    }
+
+    if (m_gaugeTex)
+    {
+        float gaugeW = m_width;
+        float gaugeH = m_height * m_ratio;
+
+        float gaugeX = m_pos.x;
+        float gaugeY = m_pos.y;
+
+        m_gaugeTex->SetScreenPosition(gaugeX, gaugeY);
+        m_gaugeTex->SetSize(gaugeW, gaugeH);
+    }
 }
 
 void HPBar::Draw(float alpha)
 {
-    if (!m_texture || !m_texture->GetSRV()) return;
-
-    // Renderer::DrawReticle は中心座標の POINT を期待する実装を想定
-    POINT center{ static_cast<LONG>(m_pos.x), static_cast<LONG>(m_pos.y) };
-    Vector2 size(1280, 720);
-
-    // DrawReticle 内で深度・ブレンドの切り替えを行い、
-    // DrawTexture 側で SRV のアンバインドとシェーダ復帰を行うことを期待
-    Renderer::DrawReticle(m_texture->GetSRV(), center, size);
+    if (m_gaugeTex && m_gaugeTex->GetSRV())
+    {
+        m_gaugeTex->Draw(alpha);
+    }
+    if (m_frameTex && m_frameTex->GetSRV())
+    {
+        m_frameTex->Draw(alpha);
+    }
 }
