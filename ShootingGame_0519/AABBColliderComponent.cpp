@@ -16,13 +16,13 @@ Vector3 AABBColliderComponent::GetCenter() const
 Vector3 AABBColliderComponent::GetSize() const
 {
     GameObject* owner = GetOwner();
-    if (!owner)
-    {
-        return m_Size;// ローカルサイズを返すフォールバック
-    }
-    return Vector3(m_Size.x * owner->GetScale().x,
-                   m_Size.y * owner->GetScale().y,
-                   m_Size.z * owner->GetScale().z);
+    if (!owner) return Vector3::Zero;
+
+    // ローカルオフセットをワールドスケールで伸ばして足す（回転はAABBでは無視）
+    Vector3 scaledOffset = Vector3(m_LocalOffset.x * owner->GetScale().x,
+        m_LocalOffset.y * owner->GetScale().y,
+        m_LocalOffset.z * owner->GetScale().z);
+    return owner->GetPosition() + scaledOffset;
 }
 
 //AABBは回転を考慮しないのでIdentity(回転なし)にしておく
@@ -37,14 +37,13 @@ DirectX::SimpleMath::Matrix AABBColliderComponent::GetRotationMatrix() const
     return DirectX::SimpleMath::Matrix::CreateFromYawPitchRoll(rot.y, rot.x, rot.z);
 }
 
-//中央から半分のサイズを引いて最小座標を出す
+// 修正後（GetSize() を使ってワールドスケールを反映）
 Vector3 AABBColliderComponent::GetMin() const
 {
-    return GetCenter() - m_Size * 0.5f;
+    return GetCenter() - GetSize() * 0.5f;
 }
 
-//中央から半分のサイズを引いて最大座標を出す
 Vector3 AABBColliderComponent::GetMax() const
 {
-    return GetCenter() + m_Size * 0.5f;
+    return GetCenter() + GetSize() * 0.5f;
 }

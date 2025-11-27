@@ -33,12 +33,16 @@ public:
     //
     Vector3 GetHalfSizeWorld() const;
 
-    //
+    void SetLocalOffset(const Vector3& offset) { m_LocalOffset = offset; }
+    const Vector3& GetLocalOffset() const { return m_LocalOffset; }
+    
     //AABBBounds GetWorldAABB() const;
 private:
 
     //•A‚‚³A‰œs‚Ì‘å‚«‚³‚ğ‚»‚ê‚¼‚êİ’è‚Å‚«‚é•Ï”
     Vector3 m_Size = Vector3(1, 1, 1);
+
+    DirectX::SimpleMath::Vector3 m_LocalOffset = DirectX::SimpleMath::Vector3::Zero;
 };
 
 
