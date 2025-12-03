@@ -34,7 +34,7 @@ public:
     void SetAutoFire(bool v) { m_autoFire = v; }
     void SetAutoAim(bool v) { m_autoAim = v; }
     void SetMinDistanceToStopShooting(float d) { m_minDistanceToStopShooting = d; }
-
+	void SetAimDistance(float d) { m_aimDistance = d; }
 
 protected:
 
@@ -59,7 +59,9 @@ private:
 
     std::weak_ptr<GameObject> m_target; //ターゲット保存用配列
 
-    //
+    
+    float m_aimDistance = 2000.0f;  //スクリーン座標からどれだけ伸ばすかの距離
+
     std::vector<std::weak_ptr<GameObject>> m_selectedTargets;
 
     //ホーミングの強さ

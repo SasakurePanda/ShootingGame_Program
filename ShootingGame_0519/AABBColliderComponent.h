@@ -3,8 +3,9 @@
 #include <DirectXMath.h>
 #include <SimpleMath.h>
 //-------------------------------------------------------
-//AABBによる当たり判定(軸に平行な当たり判定)のクラス
-//回転の事は考えず、X,Y,Z軸に対して並行のままで考える
+//  AABBによる当たり判定(軸に平行な当たり判定)のクラス
+//  回転の事は考えず、X,Y,Z軸に対して並行のままで考える
+// 
 //-------------------------------------------------------
 class AABBColliderComponent : public ColliderComponent
 {
@@ -22,6 +23,7 @@ public:
     Vector3 GetSize() const override;
 
     //AABBは回転を考慮しないのでIdentity(回転なし)にしておく
+    //いらないと思う
     DirectX::SimpleMath::Matrix GetRotationMatrix() const override;
 
     //中央から半分のサイズを引いて最小座標を出す

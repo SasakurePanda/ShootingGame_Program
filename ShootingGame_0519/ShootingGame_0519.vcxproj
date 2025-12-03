@@ -141,26 +141,33 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>d3dcompiler.lib;assimp-vc143-mt.lib;zlibstatic.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>assimp/143/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>assimp/143/lib/assimp-vc143-mt.lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AABBColliderComponent.cpp" />
     <ClCompile Include="Application.cpp" />
+    <ClCompile Include="BoxComponent.cpp" />
     <ClCompile Include="Building.cpp" />
     <ClCompile Include="BuildingSpawner.cpp" />
     <ClCompile Include="Bullet.cpp" />
     <ClCompile Include="BulletComponent.cpp" />
     <ClCompile Include="CameraObject.cpp" />
     <ClCompile Include="CircularPatrolComponent.cpp" />
+    <ClCompile Include="ColliderComponent.cpp" />
     <ClCompile Include="CollisionManager.cpp" />
+    <ClCompile Include="CollisionResolver.cpp" />
+    <ClCompile Include="CollisionResponse.cpp" />
+    <ClCompile Include="ComputeAABBvsOBBMTV.cpp" />
     <ClCompile Include="DebugGlobals.cpp" />
     <ClCompile Include="DebugRenderer.cpp" />
     <ClCompile Include="DebugUI.cpp" />
     <ClCompile Include="Enemy.cpp" />
+    <ClCompile Include="EnemyAIComponent.cpp" />
     <ClCompile Include="EnemySpawner.cpp" />
     <ClCompile Include="FloorComponent.cpp" />
-    <ClCompile Include="ModelCache.cpp" />
+    <ClCompile Include="HitPointCompornent.cpp" />
+    <ClCompile Include="ModelResource.cpp" />
     <ClCompile Include="PlayAreaComponent.cpp" />
     <ClCompile Include="system\imgui\imgui.cpp" />
     <ClCompile Include="system\imgui\imgui_demo.cpp" />
@@ -207,6 +214,7 @@
     <ClInclude Include="AABBColliderComponent.h" />
     <ClInclude Include="Application.h" />
     <ClInclude Include="BaseCamera.h" />
+    <ClInclude Include="BoxComponent.h" />
     <ClInclude Include="Building.h" />
     <ClInclude Include="BuildingSpawner.h" />
     <ClInclude Include="Bullet.h" />
@@ -217,17 +225,23 @@
     <ClInclude Include="Collision.h" />
     <ClInclude Include="CollisionHelpers.h" />
     <ClInclude Include="CollisionManager.h" />
+    <ClInclude Include="CollisionResolver.h" />
+    <ClInclude Include="CollisionResponse.h" />
+    <ClInclude Include="Common.h" />
     <ClInclude Include="commontypes.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="DebugGlobals.h" />
     <ClInclude Include="DebugRenderer.h" />
     <ClInclude Include="DebugUI.h" />
     <ClInclude Include="Enemy.h" />
+    <ClInclude Include="EnemyAIComponent.h" />
     <ClInclude Include="EnemySpawner.h" />
     <ClInclude Include="FloorComponent.h" />
+    <ClInclude Include="HitPointCompornent.h" />
     <ClInclude Include="ModelCache.h" />
     <ClInclude Include="ModelResource.h" />
     <ClInclude Include="PlayAreaComponent.h" />
+    <ClInclude Include="RaycastHit.h" />
     <ClInclude Include="system\imgui\imconfig.h" />
     <ClInclude Include="system\imgui\imgui.h" />
     <ClInclude Include="system\imgui\imgui_impl_dx11.h" />

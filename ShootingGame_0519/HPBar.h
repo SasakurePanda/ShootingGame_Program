@@ -16,7 +16,6 @@ public:
     void Update(float dt) override;
     void Draw(float alpha) override;
 
-    // 画面上の左上位置をセット（px）
     void SetScreenPos(float x, float y) { m_pos = { x, y }; UpdateLayout(); }
 
     // HP を更新（外部から呼ぶ）
@@ -33,12 +32,12 @@ private:
     float m_width;
     float m_height;
 
-    Vector2 m_pos = Vector2(100.0f, 100.0f); // 左上座標
+    Vector2 m_pos = Vector2(100.0f, 100.0f);
 
     std::shared_ptr<TextureComponent> m_frameTex;
     std::shared_ptr<TextureComponent> m_gaugeTex;
 
-    // HP 管理
+    //HP管理
     float m_currentHP = 100.0f;
     float m_maxHP = 100.0f;
     float m_ratio = 1.0f;          //表示中の比率(0..1)

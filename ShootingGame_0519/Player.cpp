@@ -32,6 +32,7 @@ void Player::Initialize()
     //コライダーコンポーネントの生成
     m_Collider  = std::make_shared<OBBColliderComponent>();
     m_Collider -> SetSize({ 12.0f, 10.0f, 30.0f }); // モデルに合わせて調整
+    m_Collider ->SetLocalOffset(Vector3(0.0f,0.0f ,15.0f));
 
   //---------------GameObjectに追加---------------
     AddComponent(modelComp);
@@ -74,7 +75,10 @@ void Player::OnCollision(GameObject* other)
                 if (applied)
                 {
                     // 弾は消す
-                    if (auto s = GetScene()) s->RemoveObject(other);
+                    if (auto s = GetScene())
+                    {
+                        s->RemoveObject(other);
+                    }
                 }
             }
             else

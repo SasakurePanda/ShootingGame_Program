@@ -22,7 +22,7 @@ Vector3 PlayAreaComponent::ResolvePosition(const Vector3& prevPos,
 {
     Vector3 out = desiredPos;
 
-    // 1) AABB 内に閉じる（X/Z と Y 両方）
+    //AABB 内に閉じる（X/Z と Y 両方）
     if (out.x < m_boundsMin.x) { out.x = m_boundsMin.x; }
     if (out.y < m_boundsMin.y) { out.y = m_boundsMin.y; }
     if (out.z < m_boundsMin.z) { out.z = m_boundsMin.z; }

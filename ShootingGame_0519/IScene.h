@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "SceneManager.h"
+#include "RaycastHit.h"
 //------------------------ISceneクラス-------------------------
 //Sceneを作る際などに使うインターフェースとしてのクラス
 //-------------------------------------------------------------
@@ -35,6 +36,13 @@ public:
 	virtual void RemoveObject(GameObject* obj) = 0;
 	//---------------他からオブジェクトの削除を行う関数------------------
 	virtual void FinishFrameCleanup() = 0;
+	//-----------------Raycastで当たった物を取ってくる関数------------------
+	virtual bool Raycast(const DirectX::SimpleMath::Vector3& origin,
+		const DirectX::SimpleMath::Vector3& dir,
+		float maxDistance,
+		RaycastHit& outHit,
+		GameObject* ignore = nullptr) { return false; };
+	
 	//---------------シーン内にあるオブジェクトを持ってくる関数------------------
 	virtual const std::vector<std::shared_ptr<GameObject>>& GetObjects() const = 0;
 };

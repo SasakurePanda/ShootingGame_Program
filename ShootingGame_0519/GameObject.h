@@ -60,16 +60,13 @@ public:
     template<typename T>
     std::shared_ptr<T> GetComponent() const
     {
-        char buf[256];
-        sprintf_s(buf, "DEBUG: GetComponent<%s> called owner=%p comp_count=%zu\n", typeid(T).name(), (void*)this, m_components.size());
-        OutputDebugStringA(buf);
-
         for (auto& comp : m_components)
         {
-            sprintf_s(buf, "DEBUG:  comp: %s ptr=%p\n", typeid(*comp).name(), (void*)comp.get());
-            OutputDebugStringA(buf);
             auto casted = std::dynamic_pointer_cast<T>(comp);
-            if (casted) return casted;
+            if (casted)
+            {
+                return casted;
+            }
         }
         return nullptr;
     }

@@ -6,6 +6,7 @@
 #include "PatrolComponent.h"
 #include "CircularPatrolComponent.h"
 #include "FixedTurretComponent.h"
+#include "EnemyAIComponent.h"
 
 EnemySpawner::EnemySpawner(GameScene* scene) : m_scene(scene)
 {
@@ -102,6 +103,58 @@ std::shared_ptr<GameObject> EnemySpawner::SpawnTurretEnemy(const TurretConfig& c
     turt->SetBulletSpeed(turretCfg.bulletSpeed);
     turt->SetTarget(turretCfg.target);
     enemy->AddComponent(turt);
+
+    m_scene->AddObject(enemy);
+
+    return enemy;
+}
+
+std::shared_ptr<GameObject> EnemySpawner::SpawnFleeEnemy(const FleeConfig& cfg,
+    const DirectX::SimpleMath::Vector3& pos)
+{
+    using namespace DirectX::SimpleMath;
+
+    //Enemyを生成し、初期設定を行う
+    auto enemy = std::make_shared<Enemy>();
+    enemy->SetScene(m_scene);
+    enemy->SetPosition(pos);
+    enemy->SetScale({ 3.0f, 3.0f, 3.0f });
+    enemy->SetInitialHP(3);
+    enemy->SetBoundingRadius(3.0f); //Raycast用の半径（GameScene::Raycast が使う）
+
+    //モデル
+    auto model = std::make_shared<ModelComponent>();
+    model->LoadModel("Asset/Model/Enemy/uploads_files_3862208_Cube.obj");
+    enemy->AddComponent(model);
+
+    //コライダー
+    auto col = std::make_shared<OBBColliderComponent>();
+    col->SetSize({ 3,3,3 });
+    enemy->AddComponent(col);
+
+    //AIコンポーネント
+    auto ai = std::make_shared<EnemyAIComponent>();
+    ai->SetMaxSpeed(cfg.maxSpeed);
+    ai->SetMaxForce(cfg.maxForce);
+    ai->SetFleeStrength(cfg.fleeStrength);
+    ai->SetLookahead(cfg.lookahead);
+    ai->SetFeelerCount(cfg.feelerCount);
+    ai->SetFeelerSpread(cfg.feelerSpread);
+
+    if (auto p = cfg.player.lock())
+    {
+        ai->SetTarget(p.get());
+    }
+
+    //PlayArea を渡す
+    if (m_scene && m_scene->GetPlayArea()) 
+    {
+        ai->SetPlayArea(m_scene->GetPlayArea());
+    }
+
+    enemy->AddComponent(ai);
+
+    enemy->Initialize();
 
     m_scene->AddObject(enemy);
 
@@ -301,6 +354,61 @@ void EnemySpawner::EnsureCircleCount()
     }
 }
 
+void EnemySpawner::EnsureFleeCount()
+{
+    // 今生きている weak_ptr を整理
+    std::vector<std::shared_ptr<GameObject>> live;
+    for (auto& w : m_spawnedFlees)
+    {
+        if (auto sp = w.lock())
+        {
+            live.push_back(sp);
+        }
+    }
+
+    m_spawnedFlees.clear();
+    for (auto& s : live)
+    {
+        m_spawnedFlees.push_back(s);
+    }
+
+    int current = static_cast<int>(live.size());
+    int want = fleeCfg.spawnCount;
+
+    if (current < want)
+    {
+        int baseIndex = current;
+
+        for (int i = 0; i < want - current; ++i)
+        {
+            int idx = baseIndex + i;
+
+            // とりあえず適当なスポーン位置（原点周りに円形配置）
+            DirectX::SimpleMath::Vector3 center = { 0.0f, 3.0f, 0.0f };
+            float radius = 50.0f;
+            float ang = (2.0f * DirectX::XM_PI * idx) / max(want, 1);
+            float x = center.x + cosf(ang) * radius;
+            float z = center.z + sinf(ang) * radius;
+            DirectX::SimpleMath::Vector3 spawnPos(x, center.y, z);
+
+            auto e = SpawnFleeEnemy(fleeCfg, {0.0f,20.0f,0.0f});
+            m_spawnedFlees.push_back(e);
+        }
+    }
+    else if (current > want)
+    {
+        int removeCount = current - want;
+        for (int i = 0; i < removeCount; ++i)
+        {
+            if (auto sp = m_spawnedFlees.back().lock())
+            {
+                m_scene->m_DeleteObjects.push_back(sp);
+            }
+            m_spawnedFlees.pop_back();
+        }
+    }
+}
+
 
 void EnemySpawner::ApplyPatrolSettingsToAll()
 {
@@ -361,6 +469,32 @@ void EnemySpawner::ApplyTurretSettingsToAll()
         }
     }
 }
+
+void EnemySpawner::ApplyFleeSettingsToAll()
+{
+    for (auto& w : m_spawnedFlees)
+    {
+        if (auto sp = w.lock())
+        {
+            auto ai = sp->GetComponent<EnemyAIComponent>();
+            if (ai)
+            {
+                ai->SetMaxSpeed(fleeCfg.maxSpeed);
+                ai->SetMaxForce(fleeCfg.maxForce);
+                ai->SetFleeStrength(fleeCfg.fleeStrength);
+                ai->SetLookahead(fleeCfg.lookahead);
+                ai->SetFeelerCount(fleeCfg.feelerCount);
+                ai->SetFeelerSpread(fleeCfg.feelerSpread);
+
+                if (auto p = fleeCfg.player.lock())
+                {
+                    ai->SetTarget(p.get());
+                }
+            }
+        }
+    }
+}
+
 
 void EnemySpawner::DestroyAll()
 {

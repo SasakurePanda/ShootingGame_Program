@@ -26,7 +26,7 @@ void TextureComponent::Initialize() {}
 
 void TextureComponent::Draw(float alpha)
 {
-    if (!m_TextureSRV) return;
+    if (!m_TextureSRV) { return; }
 
     //std::cout << "[TextureComp] Draw start SRV=" << m_TextureSRV.Get() << std::endl;
 

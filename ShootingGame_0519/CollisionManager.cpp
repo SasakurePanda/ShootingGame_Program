@@ -1,28 +1,32 @@
 ﻿#include <iostream>
+#include <algorithm>    
+#include <cmath>
+#include <cfloat>       
 #include <DirectXMath.h>
+#include <SimpleMath.h> 
+
 #include "CollisionManager.h"
-#include "Collision.h" // IsAABBHit, IsOBBHit, IsAABBvsOBB
+#include "Collision.h"
+#include "CollisionResolver.h"
 #include "DebugGlobals.h"
 #include "renderer.h"
 #include "GameObject.h"
+#include "MoveComponent.h"
 
 using namespace DirectX;
+using namespace DirectX::SimpleMath;
 
 std::vector<ColliderComponent*> CollisionManager::m_Colliders;
 bool CollisionManager::m_hitThisFrame = false;
 
 void CollisionManager::RegisterCollider(ColliderComponent* collider)
 {
-    if (!collider)
-    {
-        return;
-    }
+    if (!collider){ return; }
 
-    //オーナーがセットされているかのチェック
     if (!collider->GetOwner())
     {
         //ログ表示
-        std::cout << "【警告】コライダーの所持者が存在しません" << std::endl;
+        std::cout << "コライダーの所持者が存在しません" << std::endl;
         return;
     }
 
@@ -54,6 +58,8 @@ void CollisionManager::Clear()
 
 void CollisionManager::CheckCollisions()
 {
+    //OutputDebugStringA(("ColliderCount: " + std::to_string(m_Colliders.size()) + "\n").c_str());
+
     //全コライダーを未ヒット状態に
     for (auto col : m_Colliders) 
     {
@@ -61,7 +67,7 @@ void CollisionManager::CheckCollisions()
     }
 
     //判定する物の収集を行う
-    std::vector<CollisionInfoLite> hitPairs;
+    std::vector<CollisionInfoLite>  hitPairs;
     size_t count = m_Colliders.size();
        
     for (size_t i = 0; i < count; ++i)
@@ -118,8 +124,8 @@ void CollisionManager::CheckCollisions()
                 //各データを取得する
                 Vector3 centerA = a->GetCenter();
                 Vector3 centerB = b->GetCenter();
-                Matrix rotA = a->GetRotationMatrix();
-                Matrix rotB = b->GetRotationMatrix();
+                Matrix  rotA = a->GetRotationMatrix();
+                Matrix  rotB = b->GetRotationMatrix();
                 Vector3 halfA = a->GetSize() * 0.5f;
                 Vector3 halfB = b->GetSize() * 0.5f;
 
@@ -149,7 +155,10 @@ void CollisionManager::CheckCollisions()
                 }
 
                 // AABB と OBB 双方の Get* は null-safe 実装を期待
-                hit = Collision::IsAABBvsOBBHit(aabb->GetMin(), aabb->GetMax(), obb->GetCenter(), obb->GetRotationMatrix(), obb->GetSize() * 0.5f);
+                hit = Collision::IsAABBvsOBBHit(
+                    aabb->GetMin(), aabb->GetMax(),
+                    obb->GetCenter(), obb->GetRotationMatrix(),
+                    obb->GetSize() * 0.5f);
             }
 
             //-----------------------------------------
@@ -157,9 +166,6 @@ void CollisionManager::CheckCollisions()
             //-----------------------------------------
             if (hit)
             {
-                //当たっている場合のログ
-                //std::cout << "当たっています" << std::endl;
-
                 // コリジョンイベント通知
                 //判定フェーズでは通知しないで入れておく。
                 CollisionInfoLite info;
@@ -172,37 +178,118 @@ void CollisionManager::CheckCollisions()
                 //当たっていない場合のログ（デバッグ時のみ有効にするといい）
                 //std::cout << "当たっていません "<< std::endl;
             }
-
-            for (const auto& p : hitPairs)
-            {
-                if (!p.a || !p.b)
-                {
-                    //一つ目の当たり判定と二つ目の当たり判定の中で
-                    // いずれかが無かったら終了
-                    continue;
-                }
-
-                ColliderComponent* colA = p.a;
-                ColliderComponent* colB = p.b;
-
-                GameObject* ownerA = colA->GetOwner();
-                GameObject* ownerB = colB->GetOwner();
-
-                if (!ownerA || !ownerB) continue; // 二度目の安全チェック
-
-                // Set Hit flag
-                colA->SetHitThisFrame(true);
-                colB->SetHitThisFrame(true);
-
-                // 通知。既存のシグネチャを使う場合は null チェックのみ。
-                ownerA->OnCollision(ownerB);
-                ownerB->OnCollision(ownerA);
-
-                // もし新しい CollisionInfo 構造体を使うならここで構築して渡す
-            }
+        
         }
     }
+    
+    for (const auto& p : hitPairs)
+    {
+        if (!p.a || !p.b) { continue; }
 
+        ColliderComponent* colA = p.a;
+        ColliderComponent* colB = p.b;
+        GameObject* ownerA = colA->GetOwner();
+        GameObject* ownerB = colB->GetOwner();
+        if (!ownerA || !ownerB) { continue; }
+
+        // デフォルト：何も押し出さない
+        Vector3 pushA = Vector3::Zero;
+        Vector3 pushB = Vector3::Zero;
+        bool resolved = false;
+
+        // 型判定して適切な MTV 計算を呼ぶ
+        auto typeA = colA->GetColliderType();
+        auto typeB = colB->GetColliderType();
+
+        if (typeA == ColliderType::AABB && typeB == ColliderType::OBB)
+        {
+            resolved = Collision::ComputeAABBvsOBBMTV(
+                static_cast<AABBColliderComponent*>(colA),
+                static_cast<OBBColliderComponent*>(colB),
+                pushA, pushB);
+        }
+        else if (typeA == ColliderType::OBB && typeB == ColliderType::AABB)
+        {
+            resolved = Collision::ComputeAABBvsOBBMTV(
+                static_cast<AABBColliderComponent*>(colB),
+                static_cast<OBBColliderComponent*>(colA),
+                pushB, pushA);
+        }
+        else if (typeA == ColliderType::AABB && typeB == ColliderType::AABB)
+        {
+            resolved = Collision::ComputeAABBMTV(
+                static_cast<AABBColliderComponent*>(colA),
+                static_cast<AABBColliderComponent*>(colB),
+                pushA, pushB);
+        }
+        else
+        {
+            Vector3 dir = ownerA->GetPosition() - ownerB->GetPosition();
+            if (dir.LengthSquared() > 1e-6f)
+            {
+                dir.Normalize();
+                float tiny = 0.1f;
+                pushA = dir * tiny;
+                pushB = -dir * tiny;
+                resolved = true;
+            }
+        }
+
+        // 押し出しが計算された直後の部分（resolved が true のあと）
+        if (resolved)
+        {
+            // 'pushA' は A を押し出す量（ワールド単位）
+            // 動的 (MoveComponent) がある側に修正を委譲する
+            auto mvA = ownerA->GetComponent<MoveComponent>();
+            auto mvB = ownerB->GetComponent<MoveComponent>();
+
+            // normal の安全な計算（push がゼロなら中心差を代わりに使う）
+            Vector3 normal;
+            if (pushA.LengthSquared() > 1e-6f)
+            {
+                normal = pushA;
+                normal.Normalize();
+            }
+            else
+            {
+                Vector3 dir = ownerA->GetPosition() - ownerB->GetPosition();
+                if (dir.LengthSquared() > 1e-6f)
+                {
+                    dir.Normalize();
+                    normal = dir;
+                }
+                else
+                {
+                    normal = Vector3::Up;
+                }
+            }
+
+            if (mvA)
+            {
+                mvA->HandleCollisionCorrection(pushA, normal);
+            }
+            else if (mvB)
+            {
+                // pushB は B を押し出す向きで計算済み
+                Vector3 normalB = -normal;
+                mvB->HandleCollisionCorrection(pushB, normalB);
+            }
+            else
+            {
+                // どちらも static -> 両方少し分配して押し出す（元の方針を残す）
+                ownerA->SetPosition(ownerA->GetPosition() + pushA * 0.5f);
+                ownerB->SetPosition(ownerB->GetPosition() + pushB * 0.5f);
+            }
+        }
+
+
+        // 衝突フラグ立てと通知（OnCollision）
+        colA->SetHitThisFrame(true);
+        colB->SetHitThisFrame(true);
+
+        ownerA->OnCollision(ownerB);
+        ownerB->OnCollision(ownerA);
+    }
 }
 
 void CollisionManager::DebugDrawAllColliders(DebugRenderer& dr)
@@ -234,7 +321,7 @@ void CollisionManager::DebugDrawAllColliders(DebugRenderer& dr)
             Vector3 halfSize = fullSize * 0.5f;
 
             char buf[256];
-            sprintf_s(buf, "DBG: AABB center=(%f,%f,%f) fullSize=(%f,%f,%f)\n",
+            sprintf_s(buf, "DB G: AABB center=(%f,%f,%f) fullSize=(%f,%f,%f)\n",
                 center.x, center.y, center.z, fullSize.x, fullSize.y, fullSize.z);
             OutputDebugStringA(buf);
 

@@ -77,14 +77,13 @@ void SceneManager::Init()
     //RegisterScene("TitleScene", std::make_unique<TitleScene>());
     //m_scenes["TitleScene"]->init();
     //-------------------------------------------------------------
- /*   RegisterScene("TitleScene", std::make_unique<TitleScene>());
-    m_scenes["TitleScene"]->Init();*/
+
     RegisterScene("TitleScene", std::make_unique<TitleScene>());
-    //m_scenes["TitleScene"]->Init();
+
     RegisterScene("GameScene", std::make_unique<GameScene>());
-    //m_scenes["GameScene"]->Init();
+
     RegisterScene("ResultScene", std::make_unique<ResultScene>());
-    //m_scenes["GameScene"]->Init();
+
     //初期シーンにTitleSceneを設定
     m_currentSceneName = "TitleScene";
     m_scenes[m_currentSceneName]->Init();
@@ -94,7 +93,6 @@ void SceneManager::Init()
 void SceneManager::Update(float deltatime)
 {
     Input::Update();
-    CollisionManager::Clear(); // フレーム先頭クリア
 
     TransitionManager::Update(deltatime);
 
@@ -114,8 +112,6 @@ void SceneManager::Update(float deltatime)
             return; // short-circuit: next frame will start clean
         }
 
-        // 正常ルート：判定 / フレーム終端処理
-        CollisionManager::CheckCollisions();
         if (!m_currentSceneName.empty() && m_scenes.count(m_currentSceneName))
         {
             m_scenes[m_currentSceneName]->FinishFrameCleanup();

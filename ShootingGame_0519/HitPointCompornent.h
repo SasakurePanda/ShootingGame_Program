@@ -11,8 +11,7 @@ struct DamageInfo
 	int amount = 1;                   //ダメージ量
     GameObject* instigator = nullptr; //ダメージ源
     std::string tag;                  //
-    bool ignoreInvincibility = false; // 例外処理用
-    //将来的に knockback などを追加可能
+    bool ignoreInvincibility = false; //例外処理用
 };
 
 class HitPointComponent : public Component
@@ -27,9 +26,9 @@ public:
     void Heal(int amount);                    //HPを回復する
 
     //設定/取得
-    int GetHP() const { return m_hp; }
+    int GetHP() const    { return m_hp; }
     int GetMaxHP() const { return m_maxHp; }
-    bool IsDead() const { return m_hp <= 0; }
+    bool IsDead() const  { return m_hp <= 0; }
 
     //無敵(被弾後自動で入れるなら m_invOnHit を使う)
     void SetInvincibilityOnHit(float seconds) { m_invOnHit = seconds; }
@@ -40,11 +39,11 @@ public:
     void SetOnDeath(std::function<void()> cb) { m_onDeath = std::move(cb); }
 
 private:
-	int m_hp;       // 現在のHP
-	int m_maxHp;    // 最大HP
-	bool m_isInvincible = false;    //無敵状態かのフラグ
-	float m_invTimer = 0.0f;        //無敵時間用のタイマー
-	float m_invOnHit = 1.5f;        //被弾後に自動で無敵になる時間
+	int   m_hp;       //現在のHP
+	int   m_maxHp;    //最大HP
+	bool  m_isInvincible = false;    //無敵状態かのフラグ
+	float m_invTimer = 0.0f;         //無敵時間用のタイマー
+	float m_invOnHit = 1.5f;         //被弾後に自動で無敵になる時間
 
 	std::function<void(const DamageInfo&)> m_onDamaged;     //ダメージ時コールバック
 	std::function<void(int)> m_onHealed;                    //回復時コールバック

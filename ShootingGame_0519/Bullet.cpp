@@ -72,7 +72,7 @@ void Bullet::Draw(float alpha)
 
     // helper lambda: create 1x1 SRV with RGBA
     auto createColorSRV = [&](ComPtr<ID3D11ShaderResourceView>& outSRV, ID3D11Device* dev, uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
-        if (outSRV) return;
+        if (outSRV) { return; }
         D3D11_TEXTURE2D_DESC td{};
         td.Width = 1; td.Height = 1; td.MipLevels = 1; td.ArraySize = 1;
         td.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -118,7 +118,7 @@ void Bullet::Draw(float alpha)
 
 void Bullet::OnCollision(GameObject* other)
 {
-    if (!other) return;
+    if (!other) { return; }
 
     //EnemyÇ…è’ìÀÇµÇΩÇÁóºï˚è¡Ç∑(ëºÇÃíeÇ‚ÉvÉåÉCÉÑÅ[Ç∆ÇÕï àµÇ¢Ç…)
     //if (dynamic_cast<Enemy*>(other))

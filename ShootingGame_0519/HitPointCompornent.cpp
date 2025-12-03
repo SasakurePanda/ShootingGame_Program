@@ -3,7 +3,10 @@
 #include <algorithm>
 
 HitPointComponent::HitPointComponent(int maxHP)
-	: m_maxHp(maxHP), m_hp(maxHP){}
+	: m_maxHp(maxHP), m_hp(maxHP)
+{
+	//コンストラクタ
+}
 
 void HitPointComponent::Update(float dt)
 {

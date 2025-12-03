@@ -52,7 +52,7 @@ private:
     Vector3 m_velocity = Vector3::Zero; //方向ベクトル(単位ベクトルが望ましい)
     float m_speed = 40.0f;              //スピード
     float m_age = 0.0f;                 //経過時間
-    float m_lifetime = 5.0f;            //生存時間
+    float m_lifetime = 3.0f;            //生存時間
     
     //弾の種類
     BulletType m_ownerType = BulletType::UNKNOW;  

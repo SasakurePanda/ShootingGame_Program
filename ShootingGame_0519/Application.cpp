@@ -96,7 +96,7 @@ void Application::MainLoop()
     }
 
     //ゲーム終了処理
-    //Game::GameUninit();
+    Game::GameUninit();
 }
 
 bool Application::InitWnd()
@@ -224,13 +224,15 @@ void Application::ShowCursorAndRelease()
 LRESULT CALLBACK Application::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
-        return true;
+    {
+        return (LRESULT)1;
+    }
 
     switch (message)
     {
     case WM_DESTROY:       //ウィンドウが消える時
         PostQuitMessage(0);
-        break;
+        return 0;
     }
     return DefWindowProc(hWnd, message, wParam, lParam);
 }

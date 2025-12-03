@@ -7,69 +7,111 @@
 #include "ModelCache.h"
 #include "Building.h"
 #include <random>
+#include <cmath>
 
 BuildingSpawner::BuildingSpawner(GameScene* scene) : m_scene(scene)
 {
-  
+	std::random_device rd;
+	m_rng.seed(rd());   //ランダムシードの初期化
 }
 
-static float RandFloat(float a, float b)
+static float RandFloatStd(std::mt19937_64& rng, float a, float b)
 {
-    static std::mt19937_64 rng(123456);
     std::uniform_real_distribution<float> d(a, b);
     return d(rng);
 }
 
-void BuildingSpawner::Spawn(const BuildingConfig& cfg)
+int BuildingSpawner::Spawn(const BuildingConfig& cfg)
 {
-    if (!m_scene) { return; }
-    
-    //簡単にグリッドを配置しておく
-    int perRow = static_cast<int>(std::ceil(std::sqrt((double)cfg.count)));
-    float startX = -cfg.areaWidth * 0.5f;
-    float startZ = -cfg.areaDepth * 0.5f;
-    float stepX;
-    if (cfg.count > 1)
-    {
-        stepX = cfg.areaWidth / perRow;
-    }
-    else
-    {
-        stepX = cfg.spacing;
-    }
-    float stepZ = stepX;
+    if (!m_scene) { return 0; }
 
-    int placed = 0;
+	m_placed.clear();       //配置済み建物情報のクリア
+
+	float halfAreaX = cfg.areaWidth * 0.5f;     //エリアの半分の幅
+	float halfAreaZ = cfg.areaDepth * 0.5f;     //エリアの半分の奥行き   
+    
+	int placedCount = 0;    //配置した建物の数保存用
+
     for (int i = 0; i < cfg.count; ++i)
     {
-        float x = RandFloat(-cfg.areaWidth * 0.5f, cfg.areaWidth * 0.5f);
-        float z = RandFloat(-cfg.areaDepth * 0.5f, cfg.areaDepth * 0.5f);
+        bool placed = false;
 
-        auto obj = std::make_shared<Building>();
-        obj->SetScene(m_scene);
-        obj->SetPosition({ x, -12, z }); // 高さは統一
-        obj->SetScale({ 10, 10, 10 });
+		//Maxの試行回数まで試行
+        for (int attempt = 0; attempt < cfg.maxAttemptsPerBuilding; ++attempt)
+        {
+            //候補位置・スケール・回転を作る
+            float x = RandFloatStd(m_rng, -halfAreaX, halfAreaX);
+            float z = RandFloatStd(m_rng, -halfAreaZ, halfAreaZ);
 
-        if (cfg.randomizeRotation)
-        {
-            obj->SetRotation({ 0.0f, RandFloat(0.0f, 6.2831853f), 0.0f });
-        }
-        else
-        {
+			//スケールをランダムに決定
+            float scale = (cfg.minScale == cfg.maxScale) ? cfg.minScale : RandFloatStd(m_rng, cfg.minScale, cfg.maxScale);
+
+			//Y軸回転をランダムに決定
+            //float yaw = cfg.randomizeRotation ? RandFloatStd(m_rng, 0.0f, 2.0f * 3.14159265358979323846f) : 0.0f;
+
+            //footprint（XZ）の半幅を計算（スケールをかける）
+            float halfW = (cfg.footprintSizeX * 0.5f) * scale + cfg.spacing * 0.5f;
+            float halfD = (cfg.footprintSizeZ * 0.5f) * scale + cfg.spacing * 0.5f;
+
+            //既に配置したものと矩形衝突しないかチェック（XZ平面）
+            bool overlap = false;
+            for (const auto& pr : m_placed)
+            {
+                if (std::fabs(x - pr.cx) < (halfW + pr.halfW) &&
+                    std::fabs(z - pr.cz) < (halfD + pr.halfD))
+                {
+                    overlap = true;
+                    break;
+                }
+            }
+
+            if (overlap) { continue; }// 衝突なら別の候補を試す
+
+            // 衝突しなければ実際にオブジェクトを作成してシーンに追加する
+            auto obj = std::make_shared<Building>();
+            obj->SetScene(m_scene);
+            //高さ（Y）は必要に応じて調整してください。ここでは -12 を元のコードと同じにしています
+            obj->SetPosition({ x, -12.0f, z });
+            obj->SetScale({ 10.0f, 10.0f, 10.0f });
             obj->SetRotation({ 0.0f, 0.0f, 0.0f });
+
+            //コライダー（OBB）を追加。baseColliderSize に scale を乗算
+            auto col = std::make_shared<OBBColliderComponent>();
+            col->SetSize({ 3.0f, 17.0f, 3.0f });
+            col->SetEnabled(false);
+            obj->AddComponent(col);
+
+            //モデルを読み込みる
+            auto mc = std::make_shared<ModelComponent>();
+            mc->LoadModel(cfg.modelPath);
+            obj->AddComponent(mc);
+
+            obj->Initialize();
+            m_scene->AddObject(obj);
+
+            //記録
+            PlacedRect pr;
+            pr.cx = x;
+            pr.cz = z;
+            pr.halfW = halfW;
+            pr.halfD = halfD;
+            m_placed.push_back(pr);
+
+            placed = true;
+            ++placedCount;
+            break;
+        } //attempts
+
+        if (!placed)
+        {
+            //配置失敗（試行回数上限）: ログ出しなどして続行
+            char buf[256];
+            sprintf_s(buf, "WARN: BuildingSpawner failed to place building %d (attempts=%d)\n", i, cfg.maxAttemptsPerBuilding);
+            OutputDebugStringA(buf);
+            //無理に置かず次へ進む
         }
+    } 
 
-        // AABB コライダーを作って必ずオブジェクトに追加すること（重要）
-        auto col = std::make_shared<OBBColliderComponent>();
-        col->SetSize({ 3.0f, 3.0f, 3.0f }); // 必要に応じてモデルサイズに合わせる
-        obj->AddComponent(col);
-
-        auto mc = std::make_shared<ModelComponent>();
-        mc->LoadModel(cfg.modelPath);
-        obj->AddComponent(mc);
-
-        obj->Initialize();
-        m_scene->AddObject(obj);
-    }
+    return placedCount;
 
 }

@@ -23,10 +23,7 @@ void BoxComponent::Initialize()
 
 void BoxComponent::Draw(float /*alpha*/)
 {
-    if (!GetOwner())
-    {
-        return;
-    }
+    if (!GetOwner()){ return; }
 
     Renderer::SetDepthEnable(false);
 
@@ -35,10 +32,7 @@ void BoxComponent::Draw(float /*alpha*/)
     Renderer::SetWorldMatrix(&world);
 
     ID3D11DeviceContext* ctx = Renderer::GetDeviceContext();
-    if (!ctx)
-    {
-        return;
-    }
+    if (!ctx){ return; }
 
     if (s_sharedPrimitive)
     {

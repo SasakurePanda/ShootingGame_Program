@@ -3,7 +3,7 @@
 #include <SimpleMath.h>
 #include "AABBColliderComponent.h"
 #include "OBBColliderComponent.h"
-#include "CollisionHelpers.h" // ← ExtractAxesFromRotation() を入れたヘルパ（別ファイル）
+#include "CollisionHelpers.h" 
 
 using namespace DirectX::SimpleMath;
 
@@ -27,7 +27,9 @@ namespace Collision
     // ---------------------------------------
     // AABB vs AABB （直接の数値）
     // ---------------------------------------
-    inline bool IsAABBHit(const Vector3& minA, const Vector3& maxA,const Vector3& minB, const Vector3& maxB)
+    inline bool IsAABBHit(
+        const Vector3& minA, const Vector3& maxA,
+        const Vector3& minB, const Vector3& maxB)
     {
         //x
         const bool xOverlap = (minA.x <= maxB.x) && (maxA.x >= minB.x);
@@ -41,7 +43,9 @@ namespace Collision
     // ---------------------------------------
     // AABB vs AABB （コンポーネント版）
     // ---------------------------------------
-    inline bool IsAABBHit(const AABBColliderComponent* a, const AABBColliderComponent* b)
+    inline bool IsAABBHit(
+        const AABBColliderComponent* a, 
+        const AABBColliderComponent* b)
     {
         const Vector3 aMin = a->GetMin();
         const Vector3 aMax = a->GetMax();
@@ -127,7 +131,9 @@ namespace Collision
     }
 
 
-    inline bool IsOBBHit(const OBBColliderComponent* a, const OBBColliderComponent* b)
+    inline bool IsOBBHit(
+        const OBBColliderComponent* a,
+        const OBBColliderComponent* b)
     {
         const Vector3 centerA = a->GetCenter();
         const Matrix  rotA = a->GetRotationMatrix();
@@ -151,7 +157,9 @@ namespace Collision
     // AABB vs OBB（コンポーネント版）
     // AABB を「回転なしの OBB」として流用
     // ---------------------------------------------
-    inline bool IsAABBvsOBBHit(const AABBColliderComponent* aabb, const OBBColliderComponent* obb)
+    inline bool IsAABBvsOBBHit(
+        const AABBColliderComponent* aabb, 
+        const OBBColliderComponent* obb)
     {
         const Vector3 aMin = aabb->GetMin();
         const Vector3 aMax = aabb->GetMax();
@@ -160,9 +168,9 @@ namespace Collision
 
         Vector3 axesA[3] = 
         {
-            Vector3(1,0,0), // world X
-            Vector3(0,1,0), // world Y
-            Vector3(0,0,1)  // world Z
+            Vector3(1,0,0), //world X
+            Vector3(0,1,0), //world Y
+            Vector3(0,0,1)  //world Z
         };
 
         const Vector3 centerB = obb->GetCenter();
@@ -178,7 +186,7 @@ namespace Collision
         const Vector3& aabbMin,
         const Vector3& aabbMax,
         const Vector3& obbCenter,
-        const Matrix& obbRot,
+        const Matrix&  obbRot,
         const Vector3& obbHalfSize)
     {
         Vector3 aabbCenter = (aabbMin + aabbMax) * 0.5f;
@@ -196,5 +204,5 @@ namespace Collision
         return IsOBBHit(aabbCenter, axesA, aabbHalfSize, obbCenter, axesB, obbHalfSize);
     }
 
-
+    
 }

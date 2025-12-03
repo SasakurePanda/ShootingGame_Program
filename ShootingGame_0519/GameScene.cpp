@@ -40,7 +40,7 @@ void GameScene::DebugSetPlayerSpeed()
 {
     ImGui::Begin("DebugPlayerSpeed");
 
-    static float speed = 25.0f;
+    static float speed = 35.0f;
 
     static Vector3 Rot = { 0,0,0 };
     
@@ -194,6 +194,92 @@ bool GameScene::Raycast(const DirectX::SimpleMath::Vector3& origin,
     return false;
 }
 
+bool GameScene::RaycastForAI(const DirectX::SimpleMath::Vector3& origin,
+    const DirectX::SimpleMath::Vector3& dir,
+    float maxDistance,
+    RaycastHit& outHit,
+    GameObject* ignore)
+{
+    using namespace DirectX::SimpleMath;
+
+    Vector3 ndir = dir;
+    if (ndir.LengthSquared() <= 1e-6f)
+        return false;
+    ndir.Normalize();
+
+    float bestT = std::numeric_limits<float>::infinity();
+    std::shared_ptr<GameObject> bestObj;
+
+    for (auto& obj : m_GameObjects)
+    {
+        if (!obj) continue;
+        if (obj.get() == ignore) continue;
+
+        // ★ コライダーを持っていないなら無視
+        auto obb = obj->GetComponent<OBBColliderComponent>();
+        auto aabb = obj->GetComponent<AABBColliderComponent>();
+        bool hasCollider = (obb || aabb);
+
+        // Enemy の簡易球 or Building の AABB など…
+        float radius = 0.0f;
+        bool hasSphere = false;
+
+        if (auto e = dynamic_cast<Enemy*>(obj.get()))
+        {
+            radius = e->GetBoundingRadius();
+            if (radius > 0.0f) hasSphere = true;
+        }
+        else if (hasCollider)
+        {
+            // ★ コライダーからざっくり半径を作る（対角長の半分）
+            //    きっちりした Ray vs OBB/AABB は後で実装でもOK
+            Vector3 center = obj->GetPosition();
+            Vector3 extents;
+
+            if (obb)
+            {
+                extents = obb->GetSize() * 0.5f; // size が全長なら半分で半径相当
+            }
+            else // AABB
+            {
+                Vector3 size = aabb->GetSize();
+                extents = size * 0.5f;
+            }
+
+            radius = extents.Length(); // 対角線の長さ ≒ おおざっぱな半径
+            hasSphere = (radius > 0.0f);
+        }
+
+        if (!hasSphere) continue;
+
+        float t;
+        if (RaySphereIntersect(origin, ndir, obj->GetPosition(), radius, t))
+        {
+            if (t >= 0.0f && t <= maxDistance && t < bestT)
+            {
+                bestT = t;
+                bestObj = obj;
+            }
+        }
+    }
+
+    if (bestObj)
+    {
+        outHit.hitObject = bestObj;
+        outHit.distance = bestT;
+        outHit.position = origin + ndir * bestT;
+
+        // 簡易法線（中心からの方向）
+        outHit.normal = outHit.position - bestObj->GetPosition();
+        if (outHit.normal.LengthSquared() > 1e-6f)
+            outHit.normal.Normalize();
+
+        return true;
+    }
+
+    return false;
+}
+
 void GameScene::Init()
 {    
     //デバッグMODE SELECT
@@ -211,7 +297,7 @@ void GameScene::Init()
     //--------------------------プレイヤー作成---------------------------------
     m_playArea = std::make_shared<PlayAreaComponent>();
     m_playArea->SetScene(this); // PlayArea がシーンを利用する場合
-    m_playArea->SetBounds({ -372.0f, -1.0f, -372.0f }, { 372.0f, 150.0f, 372.0f });
+    m_playArea->SetBounds({ -150.0f, -1.0f, -150.0f }, { 150.0f, 150.0f, 150.0f });
     m_playArea->SetGroundY(-7.0f);
     
     m_player = std::make_shared<Player>();
@@ -241,9 +327,7 @@ void GameScene::Init()
 
     //-------------------------敵生成--------------------------------
     m_enemySpawner = std::make_unique<EnemySpawner>(this);
-    m_enemySpawner->patrolCfg.spawnCount = 0;
-    m_enemySpawner->circleCfg.spawnCount = 0;
-    m_enemySpawner->turretCfg.spawnCount = 1;
+    m_enemySpawner->patrolCfg.spawnCount = 1;
 
     enemyCount = m_enemySpawner->patrolCfg.spawnCount + m_enemySpawner->circleCfg.spawnCount + m_enemySpawner->turretCfg.spawnCount;
 
@@ -263,21 +347,18 @@ void GameScene::Init()
         { 120.0f,  0.0f, 120.0f },
         {   0.0f,  0.0f, 120.0f }});
 
-    m_enemySpawner->SetCircleCenter({ 50.0f, 0.0f,0.0f});
-    m_enemySpawner->SetCircleCenter({ -30.0f,20.0f,0.0f});
+    //m_enemySpawner->EnsurePatrolCount();
 
-    m_enemySpawner->SetRadius(20.0f);
-    m_enemySpawner->SetRadius(50.0f);
+    m_enemySpawner->fleeCfg.spawnCount = 1;
+    m_enemySpawner->fleeCfg.maxSpeed = 48.0f;
+    m_enemySpawner->fleeCfg.maxForce = 50.0f;
+    m_enemySpawner->fleeCfg.fleeStrength = 1.0f;
+    m_enemySpawner->fleeCfg.lookahead = 20.0f;
+    m_enemySpawner->fleeCfg.feelerCount = 9;
+    m_enemySpawner->fleeCfg.feelerSpread = DirectX::XM_PI / 4.0f;
+    m_enemySpawner->fleeCfg.player = m_player;
 
-    m_enemySpawner->SetTurretPos({ 20.0f,20.0f,0.0f });
-    m_enemySpawner->SetTurretPos({ 0.0f,40.0f,0.0f });
-
-    m_enemySpawner->turretCfg.target = m_player;
-
-    m_enemySpawner->EnsurePatrolCount();
-    m_enemySpawner->EnsureCircleCount();
-    m_enemySpawner->EnsureTurretCount();
-
+    m_enemySpawner->EnsureFleeCount();
     //------------------スカイドーム作成-------------------------
 
     m_SkyDome = std::make_shared<SkyDome>("Asset/SkyDome/SkyDome_03.png");
@@ -301,22 +382,25 @@ void GameScene::Init()
 
     //--------------------------建物生成-----------------------------
 
-    m_buildingSpawner = std::make_unique<BuildingSpawner>(this);
-    BuildingConfig bc;
-    bc.modelPath = "Asset/Build/Rock1.obj";
-    bc.count = 4;
-    bc.areaWidth = 320.0f;
-    bc.areaDepth = 320.0f;
-    bc.spacing = 20.0f;
-    bc.randomizeRotation = true;
-    bc.minScale = 0.2f;
-    bc.maxScale = 0.5f;
+    //m_buildingSpawner = std::make_unique<BuildingSpawner>(this);
+    //BuildingConfig bc;
+    //bc.modelPath = "Asset/Build/wooden watch tower2.obj";
+    //bc.count = 5;
+    //bc.areaWidth = 300.0f;
+    //bc.areaDepth = 300.0f;
+    //bc.spacing = 30.0f;          //建物間に20単位の余裕を入れる
+    //bc.randomizeRotation = true;
+    //bc.minScale = 5.0f;
+    //bc.maxScale = 10.0f;
+    //bc.footprintSizeX = 6.0f;    //必要ならモデルに合わせて調整
+    //bc.footprintSizeZ = 6.0f;
+    //bc.baseColliderSize = { 3.0f, 17.0f, 3.0f };
+    //bc.maxAttemptsPerBuilding = 50;
 
-    m_buildingSpawner->Spawn(bc);
+    //int placed = m_buildingSpawner->Spawn(bc);
 
-    bc.modelPath = "Asset/Build/wooden watch tower2.obj";
-
-    m_buildingSpawner->Spawn(bc);
+    //bc.modelPath = "Asset/Build/Rock1.obj";
+    //m_buildingSpawner->Spawn(bc);
 
     //-------------------------レティクル作成-------------------------------------
     m_reticle = std::make_shared<Reticle>(L"Asset/UI/26692699.png", m_reticleW);
@@ -328,6 +412,7 @@ void GameScene::Init()
     
 	//--------------------------HPバー作成-------------------------------------
 	auto hpUI = std::make_shared<HPBar>(L"Asset/UI/HPBar01.png", L"Asset/UI/HPGauge01.png", 100.0f, 475.0f);
+	hpUI->SetScreenPos(30.0f, 200.0f);
     hpUI->Initialize();
 
     //------------------------------追尾カメラ作成---------------------------------
@@ -358,7 +443,7 @@ void GameScene::Init()
     {
         m_SkyDome->SetCamera(cameraComp.get()); //ICameraViewProvider* を受け取る場合
         cameraComp->SetPlayArea(m_playArea.get());
-        cameraComp->SetDistance(15.0f);
+        cameraComp->SetDistance(5.0f);
     }
 
 
@@ -382,7 +467,7 @@ void GameScene::Init()
                     cameraComp->Shake(7.5f, 0.5f , FollowCameraComponent::ShakeMode::Horizontal);
                 }
 
-                // HPUI 更新：まず weak -> shared にする
+                 //HPUI 更新：まず weak -> shared にする
                 if (auto bar = wHpUI.lock())
                 {
                     if (auto playerHP = wPlayerHP.lock())
@@ -426,6 +511,11 @@ void GameScene::Init()
 
 void GameScene::Update(float deltatime)
 {
+
+
+    //フレーム先頭で前フレームの登録を消す
+    CollisionManager::Clear();
+
     //新規オブジェクトをGameSceneのオブジェクト配列に追加する
     SetSceneObject();
 
@@ -453,7 +543,6 @@ void GameScene::Update(float deltatime)
         m_isDragging = false;
     }
 
-
     //カメラにレティクル座標を渡す（最新のものを渡す）
     if (m_FollowCamera && m_FollowCamera->GetCameraComponent())
     {
@@ -461,12 +550,6 @@ void GameScene::Update(float deltatime)
     }
 
     //------------------------------------------------------------------
-
-
-
-
-
-
 
     //全オブジェクト Update を一回だけ実行（重要）
     for (auto& obj : m_GameObjects)
@@ -490,12 +573,15 @@ void GameScene::Update(float deltatime)
         }
     }
 
-    std::cout << "PlayerのHP : " << m_player->GetComponent<HitPointComponent>()->GetHP() << std::endl;
+    //std::cout << "PlayerのHP : " << m_player->GetComponent<HitPointComponent>()->GetHP() << std::endl;
 
-    if (enemyCount <= 0 || m_player->GetComponent<HitPointComponent>()->GetHP() <= 0)
+    /*if (enemyCount <= 0 || m_player->GetComponent<HitPointComponent>()->GetHP() <= 0)
     {
         SceneManager::SetChangeScene("TitleScene");
-    }
+    }*/
+
+	//当たり判定チェック実行
+    CollisionManager::CheckCollisions();
 
 }
 
@@ -676,10 +762,20 @@ void GameScene::AddTextureObject(std::shared_ptr<GameObject> obj)
 void GameScene::RemoveObject(GameObject* obj)
 {
     //ポインタがないなら処理終わり
-    if (!obj) return;
+    if (!obj) { return; }
 
-    //-------------まずm_AddObjectsにいるか確認-------------
-    //-------------------いるなら取り消す-----------------
+    //------------------------------
+	// コライダー登録解除
+    //------------------------------
+    if (auto col = obj->GetComponent<ColliderComponent>())
+    {
+        CollisionManager::UnregisterCollider(col.get());
+    }
+
+    //------------------------------
+    // m_AddObjectsにいるか確認
+    // いるなら取り消す
+    //------------------------------
    auto itPending = std::find_if(m_AddObjects.begin(), m_AddObjects.end(),
        [&](const std::shared_ptr<GameObject>& sp) { return sp.get() == obj; });
    if (itPending != m_AddObjects.end())
@@ -687,8 +783,10 @@ void GameScene::RemoveObject(GameObject* obj)
        m_AddObjects.erase(itPending);
        return;
    }
-    //-------------次に m_GameObjectsにいるか確認-----------------
-    //-------------いるならm_DeleteObjects に登録-----------------
+    //---------------------------------
+    // m_GameObjectsにいるか確認
+    // いるならm_DeleteObjects に登録
+    // ---------------------------------
     auto itInScene = std::find_if(m_GameObjects.begin(), m_GameObjects.end(),
         [&](const std::shared_ptr<GameObject>& sp) { return sp.get() == obj; });
     if (itInScene != m_GameObjects.end())
@@ -702,7 +800,6 @@ void GameScene::RemoveObject(GameObject* obj)
         }
         return;
     }
-    //------------------------------------------------------------
 }
 
 void GameScene::FinishFrameCleanup()

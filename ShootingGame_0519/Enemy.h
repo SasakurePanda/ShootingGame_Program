@@ -1,7 +1,6 @@
 #pragma once
 #include "GameObject.h"
 #include "ModelComponent.h"
-//#include "EnemyTurretComponent.h"
 #include "AABBColliderComponent.h"
 #include "OBBColliderComponent.h"
 
@@ -35,6 +34,11 @@ public:
     //衝突処理
     void OnCollision(GameObject* other) override; 
 
+    // 簡易バウンディング（丸当たり判定用）
+    void SetBoundingRadius(float r) { m_boundingRadius = r; }
+
+    float GetBoundingRadius() const { return m_boundingRadius; }
+
 protected:
    
 
@@ -46,6 +50,7 @@ protected:
 
 private:
     int m_hp = 1;
+    float m_boundingRadius = 1.0f; // デフォルト
 };
 
 

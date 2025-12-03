@@ -1,5 +1,4 @@
-﻿// MoveComponent.cpp
-#include "MoveComponent.h"
+﻿#include "MoveComponent.h"
 #include "PlayAreaComponent.h"
 #include "GameObject.h"
 #include "Application.h"
@@ -9,16 +8,13 @@
 
 using namespace DirectX::SimpleMath;
 
-constexpr float XM_PI = 3.14159265f;
-constexpr float XM_2PI = 6.28318530f;
-
 static float LerpExpFactor(float k, float dt)
 {
-    // return interpolation alpha = 1 - exp(-k*dt)
+    //
     return 1.0f - std::exp(-k * dt);
 }
 
-// normalize angle difference to [-PI, PI]
+//
 static float NormalizeAngleDelta(float a)
 {
     while (a > XM_PI) a -= XM_2PI;
@@ -28,7 +24,8 @@ static float NormalizeAngleDelta(float a)
 
 void MoveComponent::Initialize()
 {
-
+    m_prevYaw = GetOwner() ? GetOwner()->GetRotation().y : 0.0f;
+    m_visualPitchTilt = 0.0f;
 }
 
 void MoveComponent::Uninit()
@@ -36,6 +33,7 @@ void MoveComponent::Uninit()
 
 }
 
+// MoveComponent.cpp (Update の差し替え)
 void MoveComponent::Update(float dt)
 {
     // カメラがなければ処理しない
@@ -57,75 +55,48 @@ void MoveComponent::Update(float dt)
 
     // -----------------ブースト開始判定---------------------
     bool startBoost = false;
-
-    // ブーストキーが押されていて、前フレームでは押されておらず、
-    // クールダウン中でなく、現在ブースト中でない場合
     if (keyDown && !m_prevBoostKeyDown && m_cooldownTimer <= 0.0f && !m_isBoosting)
     {
-        // ブースト開始
         startBoost = true;
     }
-
-    // 前フレームのキー状態を保存
     m_prevBoostKeyDown = keyDown;
 
-    // -----------------ブースト開始処理---------------------
     if (startBoost)
     {
-        // ブースト中にする
         m_isBoosting = true;
-
-        // NOTE:
-        // ここで "完全に向きをロックする" 処理を削除しました。
-        // （以前は m_lockDuringBoost = true; m_lockedYaw = currentYaw; ... として
-        //  ブースト中は向きを完全固定していました）
-        // 今回は入力を受け付けつつ、ブースト時の回転速度を制限して安定させます。
-
-        // ブーストのタイマーを初期化
         m_boostTimer = 0.0f;
-
-        // ブースト回復のタイマーを初期化
         m_recoverTimer = -1.0f;
-
         m_cooldownTimer = m_boostCooldown;
-
         if (m_camera)
         {
-            m_camera->SetBoostState(true); // カメラにブースト開始を通知
+            m_camera->SetBoostState(true);
         }
     }
 
-    // -----------------ブースト時間経過判定---------------------
     if (m_isBoosting)
     {
         m_boostTimer += dt;
         if (m_boostTimer >= m_boostSeconds)
         {
             m_isBoosting = false;
-            m_recoverTimer = 0.0f; // 回復フェーズ開始
-
+            m_recoverTimer = 0.0f;
             if (m_camera)
             {
-                m_camera->SetBoostState(false); // カメラにブースト終了を通知
+                m_camera->SetBoostState(false);
             }
         }
     }
 
-    // -----------------クールダウン減算---------------------
     if (m_cooldownTimer > 0.0f)
     {
         m_cooldownTimer -= dt;
-        if (m_cooldownTimer < 0.0f)
-        {
-            m_cooldownTimer = 0.0f;
-        }
+        if (m_cooldownTimer < 0.0f) m_cooldownTimer = 0.0f;
     }
 
     // -----------------速度決定---------------------
     float currentSpeed = m_baseSpeed;
     if (m_isBoosting)
     {
-        // ブースト中は速さに倍率を付ける
         currentSpeed = m_baseSpeed * m_boostMultiplier;
     }
     else if (m_recoverTimer >= 0.0f && m_recoverTimer < m_boostRecover)
@@ -138,23 +109,31 @@ void MoveComponent::Update(float dt)
     }
 
     // -----------------通常移動処理---------------------
-
-    // 注視点取得
     Vector3 aimTarget = m_camera->GetAimPoint();
-
-    // 目標点までのベクトル計算
     Vector3 toTarget = aimTarget - pos;
 
-    // 目標点が近い場合の処理
+    // 目標点が近い場合は現在向きのまま前進して終わる（早期リターン）
     if (toTarget.LengthSquared() < 1e-6f)
     {
-        // 目標点が近い場合は現在向きのまま前進
         Vector3 forward = Vector3(std::sin(currentYaw) * std::cos(currentPitch),
             std::sin(currentPitch),
             std::cos(currentYaw) * std::cos(currentPitch));
         forward.Normalize();
-        pos += forward * currentSpeed * dt;
+        // velocityベースで統一
+        Vector3 desiredVel = forward * currentSpeed + m_externalVelocity;
+        m_velocity = desiredVel;
+        pos += m_velocity * dt;
+        // PlayArea 補正
+        if (m_playArea)
+        {
+            pos = m_playArea->ResolvePosition(GetOwner()->GetPosition(), pos);
+        }
+        else
+        {
+            if (pos.y < -1.0f) pos.y = -1.0f;
+        }
         GetOwner()->SetPosition(pos);
+        m_currentPitch = currentPitch;
         return;
     }
 
@@ -164,44 +143,25 @@ void MoveComponent::Update(float dt)
         std::sin(currentPitch),
         std::cos(currentYaw) * std::cos(currentPitch)
     );
+    if (currentForward.LengthSquared() > 1e-6f) currentForward.Normalize();
+    else currentForward = Vector3(0, 0, 1);
 
-    if (currentForward.LengthSquared() > 1e-6f)
-    {
-        currentForward.Normalize();
-    }
-    else
-    {
-        currentForward = Vector3(0, 0, 1);
-    }
-
-    // 未来位置予測
+    // 未来位置予測（障害物回避に使用）
     float speedRatio = (m_baseSpeed > 0.0001f) ? (currentSpeed / m_baseSpeed) : 1.0f;
     float predictTime = m_predictTimeBase + speedRatio * m_predictTimeFactor;
     float predictDist = currentSpeed * predictTime;
     Vector3 futurePos = pos + currentForward * predictDist;
 
-    // compute avoidDir by sampling several yaw offsets ahead
-    Vector3 avoidDir(0, 0, 0);
+    // 障害物回避サンプリング
+    Vector3 avoidDir = Vector3::Zero;
     if (m_obstacleTester && m_avoidSamples > 0)
     {
-        // sample angles in range [-30deg, +30deg]
         const float maxAngleRad = 30.0f * XM_PI / 180.0f;
         for (int i = 0; i < m_avoidSamples; ++i)
         {
-            float t;
-            if (m_avoidSamples == 1)
-            {
-                t = 0.0f;
-            }
-            else
-            {
-                t = float(i) / float(m_avoidSamples - 1);
-            }
-
+            float t = (m_avoidSamples == 1) ? 0.0f : float(i) / float(m_avoidSamples - 1);
             float sampleAngle = -maxAngleRad + t * (2.0f * maxAngleRad);
             float sampleYaw = currentYaw + sampleAngle;
-
-            // build a sample direction using sampleYaw and currentPitch (rotate horizontally)
             Vector3 sampleDir = Vector3(
                 std::sin(sampleYaw) * std::cos(currentPitch),
                 std::sin(currentPitch),
@@ -209,151 +169,183 @@ void MoveComponent::Update(float dt)
             );
             sampleDir.Normalize();
 
-            float rayLen = m_avoidRange + predictDist * 0.5f; // look distance scaled by speed/predict
+            float rayLen = m_avoidRange + predictDist * 0.5f;
             Vector3 hitNormal;
             float hitDist = 0.0f;
             bool hit = m_obstacleTester(futurePos, sampleDir, rayLen, hitNormal, hitDist);
             if (hit)
             {
-                // weight stronger when closer
                 float strength = std::clamp((rayLen - hitDist) / rayLen, 0.0f, 1.0f);
-                // push away from obstacle along hit normal if provided, else opposite of sampleDir
                 Vector3 away;
-                if (hitNormal.LengthSquared() > 0.0001f)
-                {
-                    away = hitNormal;
-                }
-                else
-                {
-                    away = -sampleDir;
-                }
-
-                // ensure upward component doesn't dominate
+                if (hitNormal.LengthSquared() > 0.0001f) away = hitNormal;
+                else away = -sampleDir;
                 away.y = std::clamp(away.y, -0.5f, 0.5f);
                 away.Normalize();
-                avoidDir += away * (strength * strength); // squared to smooth onset
+                avoidDir += away * (strength * strength);
             }
         }
-
-        if (avoidDir.LengthSquared() > 1e-6f)
-        {
-            avoidDir.Normalize();
-        }
+        if (avoidDir.LengthSquared() > 1e-6f) avoidDir.Normalize();
     }
 
-    // base desired direction is toward aim target
-    Vector3 toDir = toTarget;
-    toDir.Normalize();
-
-    // combine forward, input(toDir), avoid with weights
+    // 目的方向・合成
+    Vector3 toDir = toTarget; toDir.Normalize();
     Vector3 desired = toDir * m_inputWeight + currentForward * m_forwardWeight + avoidDir * m_avoidWeight;
-    if (desired.LengthSquared() > 1e-6f)
-    {
-        desired.Normalize();
-    }
-    else
-    {
-        desired = currentForward;
-    }
+    if (desired.LengthSquared() > 1e-6f) desired.Normalize();
+    else desired = currentForward;
 
-    // compute target yaw/pitch based on desired
+    // 目標角度・滑らかな回転（既存アルゴリズムを維持）
     float targetYaw = std::atan2(desired.x, desired.z);
     float horiz = std::sqrt(desired.x * desired.x + desired.z * desired.z);
     float targetPitch = std::atan2(desired.y, horiz);
-
-    // NOTE:
-    // 以前は「ブースト中は向きを完全固定する」処理がここにありました。
-    // 今回はブースト中でも入力/回避で方向を変えられるように、その強制をやめています。
-
-    // compute shortest deltas
     float deltaYaw = NormalizeAngleDelta(targetYaw - currentYaw);
     float deltaPitch = NormalizeAngleDelta(targetPitch - currentPitch);
-
-    // --- SMOOTH ROTATION: use exponential smoothing (frame-rate independent) ---
-    float yawAlpha = LerpExpFactor(m_rotSmoothK, dt);   // 0..1
+    float yawAlpha = LerpExpFactor(m_rotSmoothK, dt);
     float pitchAlpha = LerpExpFactor(m_rotSmoothK, dt);
 
-    // optionally clamp maximum angular change per frame (safety cap)
-    float maxYawChange = m_rotateSpeed * dt;   // retains old config if desired
+    float maxYawChange = m_rotateSpeed * dt;
     float maxPitchChange = m_pitchSpeed * dt;
-
-    // If boosting, reduce max turn amount to avoid wild instant turns.
     if (m_isBoosting)
     {
-        float boostTurnFactor = 0.5f; // 0..1, smaller = less turning while boosting; tune as needed
-        maxYawChange = maxYawChange * boostTurnFactor;
-        maxPitchChange = maxPitchChange * boostTurnFactor;
+        float boostTurnFactor = 0.5f;
+        maxYawChange *= boostTurnFactor;
+        maxPitchChange *= boostTurnFactor;
     }
 
-    // apply smoothing but also cap by max change
     float appliedYaw = deltaYaw * yawAlpha;
-    if (appliedYaw > maxYawChange)
-    {
-        appliedYaw = maxYawChange;
-    }
-    else if (appliedYaw < -maxYawChange)
-    {
-        appliedYaw = -maxYawChange;
-    }
-    currentYaw = currentYaw + appliedYaw;
+    appliedYaw = std::clamp(appliedYaw, -maxYawChange, maxYawChange);
+    currentYaw += appliedYaw;
 
     float appliedPitch = deltaPitch * pitchAlpha;
-    if (appliedPitch > maxPitchChange)
-    {
-        appliedPitch = maxPitchChange;
-    }
-    else if (appliedPitch < -maxPitchChange)
-    {
-        appliedPitch = -maxPitchChange;
-    }
-    currentPitch = currentPitch + appliedPitch;
+    appliedPitch = std::clamp(appliedPitch, -maxPitchChange, maxPitchChange);
+    currentPitch += appliedPitch;
 
-    // recompute forward from smoothed angles
+    // 新前方ベクトル
     Vector3 newForward = Vector3(
         std::sin(currentYaw) * std::cos(currentPitch),
         std::sin(currentPitch),
         std::cos(currentYaw) * std::cos(currentPitch)
     );
+    if (newForward.LengthSquared() > 1e-6f) newForward.Normalize();
+    else newForward = Vector3(0, 0, 1);
 
-    if (newForward.LengthSquared() > 1e-6f)
-    {
-        newForward.Normalize();
-    }
-    else
-    {
-        newForward = Vector3(0, 0, 1);
-    }
+        // --- 改良版：ロール（銀行）と垂直傾き（ノーズ上下） ---
+    // newForward, desired, currentYaw, currentPitch, m_velocity, currentSpeed がここで有効である前提
 
-    // ロール回転（銀行）は従来アルゴリズムを利用（短期的に滑らか化）
-    Vector3 cross = newForward.Cross(desired); // use desired for lateral sense
-    float lateral = cross.y;
-    constexpr float DegToRad = 3.14159265358979323846f / 180.0f;
-    float maxBankAngle = 20.0f * DegToRad;
-    float desiredRoll = -lateral * maxBankAngle;
-    float bankSmooth = 6.0f;
-    float bankLerp = bankSmooth * dt;
-    if (bankLerp > 1.0f)
-    {
-        bankLerp = 1.0f;
-    }
-    m_currentRoll = m_currentRoll + (desiredRoll - m_currentRoll) * bankLerp;
+    // lateral（横成分）は newForward x desired の Y 成分を使う（既に前で計算している場合は重複しても可）
+    Vector3 cross = newForward.Cross(desired);
+    float lateral = cross.y; // 典型的に -1..1 の範囲に近い
 
-    // set rotation (note: original code uses rot.x = -pitch)
-    rot.x = -currentPitch;
+    // 1) ヨー速度計算（前フレームとの差分から）
+    float safeDt = max(1e-6f, dt);
+    float yawDeltaForRoll = NormalizeAngleDelta(currentYaw - m_prevYaw);
+    float yawSpeed = yawDeltaForRoll / safeDt; // rad/s
+
+    // 2) 各成分を重み付けして合成
+    float fromYaw = yawSpeed * m_rollYawFactor;          // ヨーからの寄与
+    float fromLateral = -lateral * m_rollLateralFactor;  // 横入力からの寄与（符号は好みで反転）
+    speedRatio = (m_baseSpeed > 1e-6f) ? (currentSpeed / m_baseSpeed) : 1.0f;
+    float speedScale = std::clamp(speedRatio * m_rollSpeedScale, 0.5f, 2.0f);
+
+    float rawRoll = (fromYaw + fromLateral) * speedScale;
+    rawRoll = std::clamp(rawRoll, -m_maxVisualRoll, m_maxVisualRoll);
+
+    // 3) 滑らかに補間（指数遅延）
+    float rollAlpha = LerpExpFactor(m_rollLerpK, dt);
+    m_currentRoll = m_currentRoll + (rawRoll - m_currentRoll) * rollAlpha;
+
+    // 4) 垂直（上下）によるピッチ傾き（ノーズの上下）
+    float vertVel = m_velocity.y;
+
+    // 1) ターゲット傾きを非線形で計算してジャンプを和らげる（atan を使用）
+    float pitchTarget = -std::atan(vertVel / m_pitchSaturationFactor) * m_verticalTiltFactor;
+    // clamp
+    pitchTarget = std::clamp(pitchTarget, -m_maxVerticalTilt, m_maxVerticalTilt);
+
+    // 2) スムージング（指数ローパス）で“じわじわ”感を作る
+    pitchAlpha = LerpExpFactor(m_pitchTiltSmoothK, dt);
+    float newPitch = m_visualPitchTilt + (pitchTarget - m_visualPitchTilt) * pitchAlpha;
+
+    // 3) 変化速度リミットを適用して急激な方向転換を制限する
+    const float maxDeltaRad = (m_maxPitchDeltaDegPerSec * (3.14159265358979323846f / 180.0f)) * dt;
+    float delta = newPitch - m_visualPitchTilt;
+    if (delta > maxDeltaRad) delta = maxDeltaRad;
+    if (delta < -maxDeltaRad) delta = -maxDeltaRad;
+    m_visualPitchTilt += delta;
+
+    // 5) 回転をセット（元の pitch/yaw を基準に視覚用オフセットを加える）
+    rot.x = -currentPitch + m_visualPitchTilt;
     rot.y = currentYaw;
-    rot.z = m_currentRoll;
+    rot.z = -m_currentRoll; // 視覚ロールを Z 軸に設定（必要なら -m_currentRoll にする）
     GetOwner()->SetRotation(rot);
 
-    // 前進処理（smoothed forward）
-    pos += newForward * currentSpeed * dt;
+    // 6) 次フレーム用 yaw 保存
+    m_prevYaw = currentYaw;
 
-    // PlayAreaがあるなら当てはめ（オプション）
+
+    // ----- ここから velocity 統合・位置更新 -----
+    Vector3 desiredVel = newForward * currentSpeed + m_externalVelocity;
+
+    // velocity を保存 (CollisionResolver / HandleCollisionCorrection が使う)
+    m_velocity = desiredVel;
+
+    // integrate position
+    pos += m_velocity * dt;
+
+    // PlayArea 補正
     if (m_playArea)
     {
         pos = m_playArea->ResolvePosition(GetOwner()->GetPosition(), pos);
     }
+    else
+    {
+        if (pos.y < -1.0f) pos.y = -1.0f;
+    }
+
+    // 最後に SetPosition（CollisionManager はこのあとに呼ばれて押し出し処理を行う構成）
     GetOwner()->SetPosition(pos);
 
     // 更新保存
     m_currentPitch = currentPitch;
 }
+
+// MoveComponent.cpp (追加)
+void MoveComponent::HandleCollisionCorrection(const DirectX::SimpleMath::Vector3& push, const DirectX::SimpleMath::Vector3& contactNormal)
+{
+    using namespace DirectX::SimpleMath;
+
+    GameObject* owner = GetOwner();
+    if (!owner) return;
+
+    // 1) 位置を押し出す（CollisionManager が出したワールド単位の push を使う）
+    owner->SetPosition(owner->GetPosition() + push);
+
+    // 2) 速度の法線成分を取り除く（内向きの成分のみ）
+    if (m_velocity.LengthSquared() > 1e-8f)
+    {
+        float vn = m_velocity.Dot(contactNormal);
+        // vn < 0 -> m_velocity が法線方向に「突っ込む」成分を持つ（内向き）
+        if (vn < 0.0f)
+        {
+            m_velocity = m_velocity - contactNormal * vn;
+        }
+    }
+
+    // 3) 外部インパルスにも同様に
+    if (m_externalVelocity.LengthSquared() > 1e-8f)
+    {
+        float extn = m_externalVelocity.Dot(contactNormal);
+        if (extn < 0.0f)
+        {
+            m_externalVelocity = m_externalVelocity - contactNormal * extn;
+        }
+    }
+
+    // 4) 接線成分に摩擦を入れて少し減衰（オプション、調整可）
+    Vector3 tangent = m_velocity - contactNormal * m_velocity.Dot(contactNormal);
+    m_velocity = tangent * 0.85f; // 0.85 は摩擦係数（好みに合わせて）
+
+    // 5) フラグ：今フレームはコリジョンで補正済み（Update側で利用）
+    m_collisionCorrectedThisFrame = true;
+}
+
+

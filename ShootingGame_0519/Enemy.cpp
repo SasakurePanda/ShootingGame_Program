@@ -1,7 +1,6 @@
 #include <iostream>
 #include "Enemy.h"
 #include "Bullet.h"
-#include "SceneManager.h"
 
 void Enemy::Initialize()
 {

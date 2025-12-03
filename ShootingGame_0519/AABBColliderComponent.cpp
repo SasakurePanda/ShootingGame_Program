@@ -1,7 +1,10 @@
 #include "AABBColliderComponent.h"
 #include "GameObject.h"
 
-//GameObjectの位置のゲット関数
+//------------------------------------------------
+// GameObjectの位置を中心にローカルオフセットを
+// 加えてからCenterを返す
+//------------------------------------------------
 Vector3 AABBColliderComponent::GetCenter() const
 {
     GameObject* owner = GetOwner();
@@ -9,41 +12,77 @@ Vector3 AABBColliderComponent::GetCenter() const
     {
         return Vector3::Zero;
     }
-    return owner->GetPosition();
-}
 
-//当たり判定用のサイズのゲット関数(m_Size)
-Vector3 AABBColliderComponent::GetSize() const
-{
-    GameObject* owner = GetOwner();
-    if (!owner) return Vector3::Zero;
-
-    // ローカルオフセットをワールドスケールで伸ばして足す（回転はAABBでは無視）
-    Vector3 scaledOffset = Vector3(m_LocalOffset.x * owner->GetScale().x,
+    //ローカルオフセット * オブジェクトのサイズ
+    Vector3 scaledOffset = Vector3(
+        m_LocalOffset.x * owner->GetScale().x,
         m_LocalOffset.y * owner->GetScale().y,
-        m_LocalOffset.z * owner->GetScale().z);
+        m_LocalOffset.z * owner->GetScale().z
+    );
+
+	//オブジェクトの位置にオフセットを足して返す
     return owner->GetPosition() + scaledOffset;
 }
 
-//AABBは回転を考慮しないのでIdentity(回転なし)にしておく
-DirectX::SimpleMath::Matrix AABBColliderComponent::GetRotationMatrix() const
+//------------------------------------------------
+// 当たり判定用のサイズ
+// (ワールドスケールを反映したサイズ)を返す
+//------------------------------------------------
+Vector3 AABBColliderComponent::GetSize() const
 {
     GameObject* owner = GetOwner();
-    if (!owner)
+    if (!owner) 
     {
-        return DirectX::SimpleMath::Matrix::Identity;
+        //フォールバックはローカルサイズ
+        return Vector3::Zero;
     }
-    Vector3 rot = owner->GetRotation();
-    return DirectX::SimpleMath::Matrix::CreateFromYawPitchRoll(rot.y, rot.x, rot.z);
+
+    Vector3 s = owner->GetScale();
+
+	//オブジェクトの大きさを反映したサイズを返す
+    return Vector3(
+        m_Size.x * s.x,
+        m_Size.y * s.y,
+        m_Size.z * s.z);
 }
 
-// 修正後（GetSize() を使ってワールドスケールを反映）
-Vector3 AABBColliderComponent::GetMin() const
+//------------------------------------------------
+// AABBは回転しないが、
+// GetRotationMatrixは互換性のために置いておく
+//------------------------------------------------
+DirectX::SimpleMath::Matrix AABBColliderComponent::GetRotationMatrix() const
 {
-    return GetCenter() - GetSize() * 0.5f;
+	//AABBは回転しないのでIdentityを返す
+    return DirectX::SimpleMath::Matrix::Identity;
+}
+
+//------------------------------------------------
+// 中心とサイズから
+// min(一番小さい値を持つ点（左下奥の角)と
+// max(一番大きい値を持つ点（右上手前の角)を
+// 計算して返す
+//------------------------------------------------
+Vector3 AABBColliderComponent::GetMin() const
+{   
+    
+    //コライダーのワールド空間での中心位置を取得
+    Vector3 center = GetCenter();
+
+	//スケールを考慮したサイズを取得
+    Vector3 size = GetSize();
+
+	//中心から半分のサイズを引いて最小座標を出す
+    return center - size * 0.5f;
 }
 
 Vector3 AABBColliderComponent::GetMax() const
 {
-    return GetCenter() + GetSize() * 0.5f;
+    //コライダーのワールド空間での中心位置を取得
+    Vector3 center = GetCenter();
+
+    //スケールを考慮したサイズを取得
+    Vector3 size = GetSize();
+
+	//中心から半分のサイズを引いて最大座標を出す
+    return center + size * 0.5f;
 }

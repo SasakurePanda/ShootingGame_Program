@@ -66,7 +66,15 @@ public:
 				 std::function<bool(GameObject*)> predicate = nullptr,
 				 GameObject* ignore = nullptr);
 
+	bool RaycastForAI(const DirectX::SimpleMath::Vector3& origin,
+					  const DirectX::SimpleMath::Vector3& dir,
+					  float maxDistance,
+				      RaycastHit& outHit,
+					  GameObject* ignore = nullptr);
+
 	const std::vector<std::shared_ptr<GameObject>>& GetObjects() const override { return m_GameObjects; }
+
+	PlayAreaComponent* GetPlayArea() const { return m_playArea.get(); }
 
 	//削除予定のオブジェクトの配列
 	std::vector<std::shared_ptr<GameObject>> m_DeleteObjects;

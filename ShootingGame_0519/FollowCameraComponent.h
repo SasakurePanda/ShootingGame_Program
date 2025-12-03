@@ -51,11 +51,18 @@ public:
     DirectX::SimpleMath::Vector3 GetAimDirectionFromReticle() const;
 
     //----------------------------カメラ演出関数まとめ----------------------------
-	void Shake(float magnitude, float duration);       //カメラ振動関数：振動幅、振動時間
+    enum class ShakeMode
+    {
+        Horizontal,   //スクリーンのX軸
+        Vertical,     //スクリーンのY軸
+        //Random4,      //上下左右のいずれかをランダムに選ぶ
+        ALL           //X/Y両方にランダムな成分を与える
+    };
+    
+    void Shake(float magnitude, float duration, ShakeMode mode = ShakeMode::Horizontal);    //カメラ振動関数：振動幅、振動時間
+
 
 private:
-
-    //class Reticle* m_pReticle = nullptr;
 
     void UpdateCameraPosition(float dt);
 
@@ -127,4 +134,5 @@ private:
     float m_shakeFrequency = 25.0f;       //振動の基準周波数(Hz) — チューニング可
 
     DirectX::SimpleMath::Vector3 m_shakeOffset = DirectX::SimpleMath::Vector3::Zero;
+    ShakeMode m_shakeMode = ShakeMode::Horizontal;  //現在の振動方向を決めるモード
 };

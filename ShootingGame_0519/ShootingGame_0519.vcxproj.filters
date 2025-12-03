@@ -40,9 +40,6 @@
     <Filter Include="ヘッダー ファイル\Manager">
       <UniqueIdentifier>{ee4e74b1-73eb-4059-b6d3-732a724cf69d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ヘッダー ファイル\Collider">
-      <UniqueIdentifier>{4765036f-f4d0-4270-a717-4b58329babf0}</UniqueIdentifier>
-    </Filter>
     <Filter Include="ソース ファイル\Debug">
       <UniqueIdentifier>{3587a1e4-bfba-497b-a497-525f73c91db0}</UniqueIdentifier>
     </Filter>
@@ -63,6 +60,9 @@
     </Filter>
     <Filter Include="ソース ファイル\Model">
       <UniqueIdentifier>{633a69bf-6f2c-47d7-8bc7-fd6b098568a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\Component\Enemy">
+      <UniqueIdentifier>{a7fd4800-7bbf-4c47-bbb1-b2f87c68f86d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -171,12 +171,6 @@
     <ClCompile Include="Building.cpp">
       <Filter>ソース ファイル\GameObject</Filter>
     </ClCompile>
-    <ClCompile Include="PatrolComponent.cpp">
-      <Filter>ソース ファイル\Component</Filter>
-    </ClCompile>
-    <ClCompile Include="CircularPatrolComponent.cpp">
-      <Filter>ソース ファイル\Component</Filter>
-    </ClCompile>
     <ClCompile Include="system\imgui\imgui.cpp">
       <Filter>ソース ファイル\Imgui</Filter>
     </ClCompile>
@@ -216,17 +210,44 @@
     <ClCompile Include="EnemySpawner.cpp">
       <Filter>ソース ファイル\Spawner</Filter>
     </ClCompile>
-    <ClCompile Include="FixedTurretComponent.cpp">
-      <Filter>ソース ファイル\Component</Filter>
-    </ClCompile>
     <ClCompile Include="BuildingSpawner.cpp">
       <Filter>ソース ファイル\Spawner</Filter>
     </ClCompile>
-    <ClCompile Include="ModelCache.cpp">
-      <Filter>ソース ファイル\Model</Filter>
-    </ClCompile>
     <ClCompile Include="PlayAreaComponent.cpp">
       <Filter>ソース ファイル\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="ModelResource.cpp">
+      <Filter>ソース ファイル\Model</Filter>
+    </ClCompile>
+    <ClCompile Include="BoxComponent.cpp">
+      <Filter>ソース ファイル\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="HitPointCompornent.cpp">
+      <Filter>ソース ファイル\Component</Filter>
+    </ClCompile>
+    <ClCompile Include="CollisionResolver.cpp">
+      <Filter>ソース ファイル\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="ColliderComponent.cpp">
+      <Filter>ソース ファイル\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="CollisionResponse.cpp">
+      <Filter>ソース ファイル\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="ComputeAABBvsOBBMTV.cpp">
+      <Filter>ソース ファイル\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="CircularPatrolComponent.cpp">
+      <Filter>ソース ファイル\Component\Enemy</Filter>
+    </ClCompile>
+    <ClCompile Include="FixedTurretComponent.cpp">
+      <Filter>ソース ファイル\Component\Enemy</Filter>
+    </ClCompile>
+    <ClCompile Include="PatrolComponent.cpp">
+      <Filter>ソース ファイル\Component\Enemy</Filter>
+    </ClCompile>
+    <ClCompile Include="EnemyAIComponent.cpp">
+      <Filter>ソース ファイル\Component\Enemy</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -436,6 +457,27 @@
     </ClInclude>
     <ClInclude Include="PlayAreaComponent.h">
       <Filter>ヘッダー ファイル\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="RaycastHit.h">
+      <Filter>ソース ファイル\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="BoxComponent.h">
+      <Filter>ソース ファイル\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="HitPointCompornent.h">
+      <Filter>ソース ファイル\Component</Filter>
+    </ClInclude>
+    <ClInclude Include="CollisionResolver.h">
+      <Filter>ソース ファイル\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="CollisionResponse.h">
+      <Filter>ソース ファイル\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="EnemyAIComponent.h">
+      <Filter>ソース ファイル\Component\Enemy</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
