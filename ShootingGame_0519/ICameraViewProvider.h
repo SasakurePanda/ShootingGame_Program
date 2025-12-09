@@ -29,5 +29,7 @@ public:
 
     // ブースト状態を外部から通知する（既存の実装を壊さないためデフォルトは no-op）
     virtual void SetBoostState(bool isBoosting) { /* default: ignore */ }
+
+    virtual SMS::Vector2 GetReticleScreen() const = 0;
 };
 

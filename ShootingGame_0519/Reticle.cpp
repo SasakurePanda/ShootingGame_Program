@@ -79,5 +79,4 @@ void Reticle::Draw(float alpha)
     //DrawReticle 内で深度・ブレンドの切り替えを行い、
     //DrawTexture 側で SRV のアンバインドとシェーダ復帰を行うことを期待
     Renderer::DrawReticle(m_texture->GetSRV(), center, size);
-
 }

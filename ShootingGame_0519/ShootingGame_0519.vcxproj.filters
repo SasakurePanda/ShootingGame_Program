@@ -261,6 +261,9 @@
     <ClCompile Include="DebugMoveComponent.cpp">
       <Filter>ヘッダー ファイル\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="EnemyMoveComponent.cpp">
+      <Filter>ソース ファイル\Component\Enemy</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h">
@@ -502,6 +505,9 @@
     </ClInclude>
     <ClInclude Include="DebugMoveComponent.h">
       <Filter>ヘッダー ファイル\Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="EnemyMoveComponent.h">
+      <Filter>ソース ファイル\Component\Enemy</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

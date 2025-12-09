@@ -24,14 +24,15 @@ public:
     void SetSpeed(float speed) { m_baseSpeed = speed; }
     void SetCameraView(ICameraViewProvider* camera) { m_camera = camera; }
     void SetPlayArea(PlayAreaComponent* playArea) { m_playArea = playArea; }
-
-    void SetObstacleTester(std::function<bool(const DirectX::SimpleMath::Vector3&,
+    /*void SetObstacleTester(std::function<bool(const DirectX::SimpleMath::Vector3&,
                             const DirectX::SimpleMath::Vector3&,
                             float,
                             DirectX::SimpleMath::Vector3&,
-                            float&)> tester) { m_obstacleTester = std::move(tester); }
+                            float&)> tester) { m_obstacleTester = std::move(tester); }*/
     //-----------------------------------Get関数関連------------------------------------
     bool GetBoostingState() const { return m_isBoosting; }
+    
+    DirectX::SimpleMath::Vector3 GetCurrentVelocity() const{ return m_velocity + m_externalVelocity; }
 
 	//ブースト量を取得する関数(演出で使用)
     float GetBoostIntensity() const
@@ -53,54 +54,48 @@ public:
             return 0.0f;
         }
     }
+
+    
 	//-----------------------------------その他関数関連------------------------------------
     void AddImpulse(const DirectX::SimpleMath::Vector3& impulse){ m_externalVelocity += impulse; }
     void HandleCollisionCorrection(const DirectX::SimpleMath::Vector3& push,
                                    const DirectX::SimpleMath::Vector3& contactNormal);
-    void ClearCollisionCorrectionFlag() { m_collisionCorrectedThisFrame = false; }
 
     void ApplyCollisionPush();
 private:
 
+    //-----------------基本向き取得用--------------------
     //カメラの向きを取得する用のポインタ
     ICameraViewProvider* m_camera = nullptr;
 
-    float m_rotateSpeed = 10.0f;  //（未使用のまま残すが、角速度上限として保有）
-    float m_rotSmoothK = 8.0f;    // 回転の指数遅延係数（大きいほど素早く追従）
+    //--------------------回転制御-----------------------
+    float m_rotateSpeed = 10.0f;  //yawの最大回転速度(ラジアン/秒)の上限
+    float m_rotSmoothK  = 8.0f;   //yawの指数補間係数(大きいほど素早く回転する)
 
     float m_currentRoll = 0.0f;   //現在のロール
-
-    float m_pitchSpeed = 3.5f;    //ピッチ回転速度（代替の制限用に残す）
-
+    float m_pitchSpeed  = 2.0f;   //ピッチ回転速度
     float m_currentPitch = 0.0f;  //現在のピッチ
 
-    //-------------------------ブースト関連変数----------------------------
-    float m_boostMultiplier = 2.5f;   // 何倍速くなるか
+    //-----------------ブースト関連変数--------------------
+    float m_boostMultiplier = 2.5f; //何倍速くなるか
+    float m_boostSeconds  = 1.0f;    //ブースト持続秒数
+    float m_boostRecover  = 0.8f;    //通常速度に戻るまでの秒数
+    float m_boostCooldown = 0.5f;   // 次ブーストまでのクールダウン
 
-    float m_boostSeconds = 1.0f;   // ブーストが持続する秒数
+    bool  m_isBoosting = false;     //ブースト中かどうか
+    float m_boostTimer = 0.0f;      //ブースト経過時間
+    float m_recoverTimer  = 0.0f;   //回復経過時間
+    float m_cooldownTimer = 0.0f;   //クールダウン残り時間
 
-    float m_boostRecover = 0.8f;      //通常速度に戻るまでの秒数
-
-    float m_boostCooldown = 0.5f;     // 次ブーストできるまでのクールダウン
-
-    bool  m_isBoosting = false;       //ブースト中かどうか 
-
-    float m_boostTimer = 0.0f;        // ブースト経過
-
-    float m_recoverTimer = 0.0f;      // 回復の進捗
-
-    float m_cooldownTimer = 0.0f;
-
-    float m_baseSpeed = 35.0f;        // 元のスピード格納用
-
-    int   m_boostKey = VK_SHIFT;      //トリガーキー(変更可)
-
+    float m_baseSpeed = 35.0f;        //元のスピード格納用
+    int   m_boostKey  = VK_SHIFT;     //ブーストキー
     bool  m_prevBoostKeyDown = false; //エッジ検出用
 
+    //------------------プレイエリア---------------------
     PlayAreaComponent* m_playArea = nullptr;
 
-    //-------------------------障害物回避用変数-------------------------
-    float m_predictTimeBase = 0.12f;
+    //------------------障害物回避用変数-----------------
+    /*float m_predictTimeBase = 0.12f;
     float m_predictTimeFactor = 0.18f; // predictTime = base + (speed/baseSpeed) * factor
     float m_avoidRange = 5.0f;
     float m_avoidWeight = 1.6f;
@@ -108,18 +103,19 @@ private:
     float m_inputWeight = 0.9f;
     int   m_avoidSamples = 5; 
 
-    std::function<bool(const DirectX::SimpleMath::Vector3& /*start*/,
-        const DirectX::SimpleMath::Vector3& /*dir*/,
-        float /*length*/,
-        DirectX::SimpleMath::Vector3& /*outNormal*/,
-        float& /*outDist*/)> m_obstacleTester;
+    std::function<bool(const DirectX::SimpleMath::Vector3& start,
+        const DirectX::SimpleMath::Vector3& dir,
+        float length,
+        DirectX::SimpleMath::Vector3& outNormal,
+        float& outDist)> m_obstacleTester;*/
 
-	DirectX::SimpleMath::Vector3 m_externalVelocity = DirectX::SimpleMath::Vector3::Zero; //外部から力を加えられる速度
-    DirectX::SimpleMath::Vector3 m_velocity = DirectX::SimpleMath::Vector3::Zero;
+    //---------------------速度関連----------------------
+	DirectX::SimpleMath::Vector3 m_externalVelocity     //外部から力を加えられる速度
+        = DirectX::SimpleMath::Vector3::Zero; 
+    DirectX::SimpleMath::Vector3 m_velocity 
+        = DirectX::SimpleMath::Vector3::Zero;
 
-    bool m_collisionCorrectedThisFrame;
-
-    // --- 視覚的なドリフト用メンバ ---
+    //------------視覚的なドリフト(ロール用) -------------
     float m_prevYaw = 0.0f;            // 前フレームの yaw（角速度計算用）
     float m_visualPitchTilt = 0.0f;    // 視覚用のピッチ傾き（ノーズ上下）
 
@@ -129,6 +125,8 @@ private:
     float m_rollSpeedScale = 1.0f;     // 速度によるスケール（1.0＝無変化）
     float m_rollLerpK = 8.0f;          // ロールの滑らかさ係数（大きいほど速く追従）
     float m_maxVisualRoll = 0.38397244f; // 最大ロール角（ラジアン、≈22度）
+
+
     float m_verticalTiltFactor = 0.4f; // 垂直速度からのピッチ寄与（ラジアンスケール）
     float m_maxVerticalTilt = 0.13962634f; // 最大ピッチ傾き（ラジアン、≈8度）
 
@@ -141,7 +139,7 @@ private:
 
     float m_externalDamping = 1.0f;
 
-    // 既存メンバのどこかに追加してください
+    //------------------衝突押し出し(今はロジック停止中) ---------------------
     DirectX::SimpleMath::Vector3 m_totalPushThisFrame = DirectX::SimpleMath::Vector3::Zero;
     bool m_hasPushThisFrame = false;
 

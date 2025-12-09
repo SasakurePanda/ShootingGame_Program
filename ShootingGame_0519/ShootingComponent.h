@@ -60,7 +60,7 @@ private:
 
     float m_cooldown = 0.1f;        //クールタイム
     float m_timer = 0.0f;           //経過時間
-    float m_bulletSpeed = 500.0f;   //弾の速さ
+    float m_bulletSpeed = 1000.0f;   //弾の速さ
     float m_spawnOffset = 1.5f;     //発射位置のオフセット
     float m_minDistanceToStopShooting = 0.0f;   //射撃を止める最短距離
     
@@ -70,7 +70,7 @@ private:
     std::weak_ptr<GameObject> m_target; //ターゲット保存用配列
 
     
-    float m_aimDistance = 2000.0f;  //スクリーン座標からどれだけ伸ばすかの距離
+    float m_aimDistance = 750.0f;  //スクリーン座標からどれだけ伸ばすかの距離
 
     std::vector<std::weak_ptr<GameObject>> m_selectedTargets;
 

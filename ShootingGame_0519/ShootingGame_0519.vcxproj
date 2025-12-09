@@ -167,6 +167,7 @@
     <ClCompile Include="DebugUI.cpp" />
     <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="EnemyAIComponent.cpp" />
+    <ClCompile Include="EnemyMoveComponent.cpp" />
     <ClCompile Include="EnemySpawner.cpp" />
     <ClCompile Include="FloorComponent.cpp" />
     <ClCompile Include="HitPointCompornent.cpp" />
@@ -241,6 +242,7 @@
     <ClInclude Include="DebugUI.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="EnemyAIComponent.h" />
+    <ClInclude Include="EnemyMoveComponent.h" />
     <ClInclude Include="EnemySpawner.h" />
     <ClInclude Include="FloorComponent.h" />
     <ClInclude Include="HitPointCompornent.h" />

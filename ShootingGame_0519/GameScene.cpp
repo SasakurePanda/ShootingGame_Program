@@ -300,6 +300,9 @@ void GameScene::Init()
     m_playArea->SetBounds({ -150.0f, -1.0f, -150.0f }, { 150.0f, 150.0f, 150.0f });
     m_playArea->SetGroundY(-7.0f);
     
+    m_FollowCamera = std::make_shared<CameraObject>();
+    m_FollowCamera->Initialize();
+
     m_player = std::make_shared<Player>();
     m_player->SetPosition({ 0.0f, 0.0f, 0.0f });
     m_player->SetRotation({ 80.0,0.0,0.0 });
@@ -314,20 +317,20 @@ void GameScene::Init()
         moveComp->SetPlayArea(m_playArea.get());
 
         // obstacleTester を PlayArea の RaycastObstacle に接続
-        moveComp->SetObstacleTester([this](const DirectX::SimpleMath::Vector3& start,
-            const DirectX::SimpleMath::Vector3& dir,
-            float len,
-            DirectX::SimpleMath::Vector3& outNormal,
-            float& outDist) -> bool
-            {
-                if (!m_playArea) { return false; }
-                return m_playArea->RaycastObstacle(start, dir, len, outNormal, outDist, /*ignore*/ nullptr);
-            });
+        //moveComp->SetObstacleTester([this](const DirectX::SimpleMath::Vector3& start,
+        //    const DirectX::SimpleMath::Vector3& dir,
+        //    float len,
+        //    DirectX::SimpleMath::Vector3& outNormal,
+        //    float& outDist) -> bool
+        //    {
+        //        if (!m_playArea) { return false; }
+        //        return m_playArea->RaycastObstacle(start, dir, len, outNormal, outDist, /*ignore*/ nullptr);
+        //    });
     }
 
     //-------------------------敵生成--------------------------------
     m_enemySpawner = std::make_unique<EnemySpawner>(this);
-    m_enemySpawner->patrolCfg.spawnCount = 1;
+    m_enemySpawner->patrolCfg.spawnCount = 2;
 
     enemyCount = m_enemySpawner->patrolCfg.spawnCount + m_enemySpawner->circleCfg.spawnCount + m_enemySpawner->turretCfg.spawnCount;
 
@@ -347,7 +350,7 @@ void GameScene::Init()
         { 120.0f,  0.0f, 120.0f },
         {   0.0f,  0.0f, 120.0f }});
 
-    //m_enemySpawner->EnsurePatrolCount();
+    m_enemySpawner->EnsurePatrolCount();
 
     m_enemySpawner->fleeCfg.spawnCount = 1;
     m_enemySpawner->fleeCfg.maxSpeed = 48.0f;
@@ -512,7 +515,7 @@ void GameScene::Init()
 void GameScene::Update(float deltatime)
 {
 
-    static float currentBlur = 0.0f;
+    //static float currentBlur = 0.0f;
 
     // MoveComponent をキャッシュ
     if (!m_playerMove)
@@ -532,7 +535,7 @@ void GameScene::Update(float deltatime)
         float interpSpeed = 8.0f;
 
         //--- currentBlur を目標値へ補間（指数補間）
-        currentBlur += (targetBlur - currentBlur) * std::min(1.0f, interpSpeed * deltatime);
+        //currentBlur += (targetBlur - currentBlur) * std::min(1.0f, interpSpeed * deltatime);
 
         //---------------------------------------------------------
         // ★ Renderer のポストプロセス設定に反映する
@@ -540,7 +543,7 @@ void GameScene::Update(float deltatime)
         PostProcessSettings pp = Renderer::GetPostProcessSettings();
 
         // ブラー強度
-        pp.motionBlurAmount = currentBlur;        // 0〜1
+        //pp.motionBlurAmount = currentBlur;        // 0〜1
 
         // 画面上の伸びる方向（仮例：前方向）
         pp.motionBlurDir = { 0.0f, -1.0f };       // 奥方向に伸ばしたい場合
@@ -587,7 +590,13 @@ void GameScene::Update(float deltatime)
         m_FollowCamera->GetCameraComponent()->SetReticleScreenPos(Vector2((float)m_lastDragPos.x, (float)m_lastDragPos.y));
     }
 
-    //------------------------------------------------------------------
+    //----------------------------------------------
+
+    if (m_FollowCamera && m_reticle)
+    {
+        auto followCan = m_FollowCamera->GetComponent<FollowCameraComponent>();
+        followCan->SetReticleScreenPos(m_reticle->GetScreenPos());
+    }
 
     //全オブジェクト Update を一回だけ実行（重要）
     for (auto& obj : m_GameObjects)
