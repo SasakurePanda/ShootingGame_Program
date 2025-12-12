@@ -44,4 +44,22 @@ void Game::GameDraw(float deltaTime)
     SceneManager::Draw(deltaTime);
     //フレームの終了
     Renderer::End();
+
+    // --- 3Dシーン（ブラー対象） ---
+    /*Renderer::BeginScene();              // SceneColorRTV + DSV をセット＆クリア
+    SceneManager::DrawWorld(deltaTime);  // 3Dだけ描画
+
+    // --- モーションブラー（SceneColor → BackBuffer） ---
+    Renderer::ApplyMotionBlur();
+
+    // --- UI／ImGui（非ブラー） ---
+    Renderer::BeginUI();                 // BackBufferRTV をセット（クリアなし）
+    SceneManager::DrawUI(deltaTime);     // HPバー、レティクルなど 2D/UI
+
+    // ImGui を使っているならここで
+    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+    // --- Present ---
+    Renderer::EndFrame();*/
+
 }

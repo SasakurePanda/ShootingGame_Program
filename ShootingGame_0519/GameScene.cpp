@@ -304,7 +304,7 @@ void GameScene::Init()
     m_FollowCamera->Initialize();
 
     m_player = std::make_shared<Player>();
-    m_player->SetPosition({ 0.0f, 0.0f, 0.0f });
+    m_player->SetPosition({ 0.0f, 0.0f, 125.0f });
     m_player->SetRotation({ 80.0,0.0,0.0 });
     m_player->SetScale({ 0.3f, 0.3f, 0.3f });
     m_player->Initialize();
@@ -388,7 +388,7 @@ void GameScene::Init()
     m_buildingSpawner = std::make_unique<BuildingSpawner>(this);
     BuildingConfig bc;
     bc.modelPath = "Asset/Build/wooden watch tower2.obj";
-    bc.count = 6;
+    bc.count = 8;
     bc.areaWidth = 300.0f;
     bc.areaDepth = 300.0f;
     bc.spacing = 30.0f;          //建物間に20単位の余裕を入れる
@@ -399,6 +399,19 @@ void GameScene::Init()
     bc.footprintSizeZ = 6.0f;
     bc.baseColliderSize = { 3.0f, 17.0f, 3.0f };
     bc.maxAttemptsPerBuilding = 50;
+
+    bc.fixedPositions =
+    {
+        { 125.0f, -12.0f,    0.0f },
+        {  62.5f, -12.0f, -125.0f },
+        { -62.5f, -12.0f,  125.0f },
+        { -62.5f, -12.0f, -125.0f },
+        {  62.5f, -12.0f,  125.0f },
+        {-125.0f, -12.0f,  -62.5f },
+        {-125.0f, -12.0f,   62.5f },
+        {   0.0f,   0.0f,    0.0f },
+    };
+
 
     int placed = m_buildingSpawner->Spawn(bc);
 
@@ -514,8 +527,7 @@ void GameScene::Init()
 
 void GameScene::Update(float deltatime)
 {
-
-    //static float currentBlur = 0.0f;
+    static float currentBlur = 0.0f;
 
     // MoveComponent をキャッシュ
     if (!m_playerMove)
@@ -525,31 +537,30 @@ void GameScene::Update(float deltatime)
 
     if (m_playerMove)
     {
-        //--- 今ブースト中か？
-        bool boosting = m_playerMove->GetBoostingState();
+        // ① ブーストの“強さ”を 0～1 で取得（MoveComponent 側で用意済み）
+        float boostIntensity = m_playerMove->GetBoostIntensity(); // 0～1
 
-        //--- ブラーの目標値
-        float targetBlur = boosting ? 1.0f : 0.0f; // ガッツリなら 1.0f
+        // ② ブラーの目標値（強すぎるなら 0.7f とかにしてもOK）
+        float targetBlur = boostIntensity * 1.0f;
 
-        //--- 補間速度
-        float interpSpeed = 8.0f;
-
-        //--- currentBlur を目標値へ補間（指数補間）
-        //currentBlur += (targetBlur - currentBlur) * std::min(1.0f, interpSpeed * deltatime);
+        // ③ 補間（急にON/OFFせず、なめらかに変化）
+        float interpSpeed = 6.0f; // 大きいほど追従が速い
+        float alpha = std::min(1.0f, interpSpeed * deltatime);
+        currentBlur += (targetBlur - currentBlur) * alpha;
 
         //---------------------------------------------------------
         // ★ Renderer のポストプロセス設定に反映する
         //---------------------------------------------------------
         PostProcessSettings pp = Renderer::GetPostProcessSettings();
 
-        // ブラー強度
-        //pp.motionBlurAmount = currentBlur;        // 0〜1
+        // ブラー強度（0～1）
+        pp.motionBlurAmount = currentBlur;
 
-        // 画面上の伸びる方向（仮例：前方向）
-        pp.motionBlurDir = { 0.0f, -1.0f };       // 奥方向に伸ばしたい場合
+        // 画面上の伸びる方向（とりあえず前方へ）
+        pp.motionBlurDir = { 0.0f, -1.0f };
 
-        // ブラーの長さ（大きいほど “ドバーッ” と伸びる）
-        pp.motionBlurStretch = 0.03f;             // （調整ポイント）
+        // ブラーの伸びる長さ（調整ポイント）
+        pp.motionBlurStretch = 0.03f;
 
         Renderer::SetPostProcessSettings(pp);
     }
@@ -573,11 +584,11 @@ void GameScene::Update(float deltatime)
         m_isDragging = true;
     }
 
-    if (m_isDragging && Input::IsMouseLeftDown()) 
+    /*if (m_isDragging && Input::IsMouseLeftDown()) 
     {
         m_lastDragPos = Input::GetMousePosition();
         SetReticleByCenter(m_lastDragPos);
-    }
+    }*/
 
     if (!Input::IsMouseLeftDown() && m_isDragging)
     {
@@ -591,12 +602,14 @@ void GameScene::Update(float deltatime)
     }
 
     //----------------------------------------------
-
+    
+    auto followCan = m_FollowCamera->GetComponent<FollowCameraComponent>();
     if (m_FollowCamera && m_reticle)
     {
-        auto followCan = m_FollowCamera->GetComponent<FollowCameraComponent>();
         followCan->SetReticleScreenPos(m_reticle->GetScreenPos());
     }
+
+    followCan->SetReticleScreen(m_reticle->camera);
 
     //全オブジェクト Update を一回だけ実行（重要）
     for (auto& obj : m_GameObjects)

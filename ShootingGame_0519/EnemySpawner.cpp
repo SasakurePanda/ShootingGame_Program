@@ -7,6 +7,7 @@
 #include "CircularPatrolComponent.h"
 #include "FixedTurretComponent.h"
 #include "EnemyAIComponent.h"
+#include "HitPointCompornent.h"
 
 EnemySpawner::EnemySpawner(GameScene* scene) : m_scene(scene)
 {
@@ -22,7 +23,7 @@ std::shared_ptr<GameObject> EnemySpawner::SpawnPatrolEnemy(const PatrolConfig& c
     auto enemy = std::make_shared<Enemy>();
     enemy->SetScene(m_scene);
     enemy->SetPosition(pos);
-    enemy->SetInitialHP(3);
+    //enemy->SetInitialHP(3);
 
     //モデルの設定を行い、Componentを付ける
     auto model = std::make_shared<ModelComponent>();
@@ -41,6 +42,11 @@ std::shared_ptr<GameObject> EnemySpawner::SpawnPatrolEnemy(const PatrolConfig& c
     patrol->SetPingPong(cfg.pingPong);
     patrol->SetArrivalThreshold(cfg.arrival);
     enemy->AddComponent(patrol);
+
+    auto hp = std::make_shared<HitPointComponent>(4);
+    hp->SetInvincibilityOnHit(0.0f);
+    enemy->AddComponent(hp);
+    
 
     m_scene->AddObject(enemy); // シーンに登録する既存関数を使う
 

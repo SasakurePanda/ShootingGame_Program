@@ -20,7 +20,8 @@ public:
     void SetSize(float size) { m_size = size; if (m_texture) m_texture->SetSize(m_size, m_size); }
 
     //スクリーン上での位置のゲッター
-    Vector2 GetScreenPos() const { return m_pos; }
+    Vector2 GetScreenPos() const { return m_pos; } 
+    Vector2 camera;
 private:
     std::wstring m_texturePath;
     float m_size;                 // 表示サイズ（幅＝高さ）
@@ -30,5 +31,7 @@ private:
     // テクスチャコンポーネント（shared_ptr で管理）
     std::shared_ptr<TextureComponent> m_texture;
     POINT m_lastDrag{ 0,0 };
+
+
 };
 

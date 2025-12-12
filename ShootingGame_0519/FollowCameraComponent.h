@@ -30,6 +30,15 @@ public:
     void SetBoostState(bool isBoosting) override;
     void SetPlayArea(PlayAreaComponent* p) { m_playArea = p; }
 
+    void SetReticleMargin(float marginX, float marginY)
+    {
+        m_reticleMarginX = marginX;
+        m_reticleMarginY = marginY;
+    }
+
+    // レティクル座標を外から設定するときはこれを使う
+    void SetReticleScreen(const DirectX::SimpleMath::Vector2& pos);
+
     //レティクルのスクリーン位置を外部（GameScene）から毎フレーム渡すための関数
     void SetReticleScreenPos(const Vector2& screenPos) { m_ReticleScreen = screenPos; }
 
@@ -42,11 +51,13 @@ public:
     Vector3 GetForward() const override;
     Vector3 GetRight() const override;
 
-   
-    //ICameraViewProvider で追加したメソッドの実装を宣言
-    Vector3 GetAimPoint() const override { return m_AimPoint; }
+    Vector3 GetPosition() const override { return m_Spring.GetPosition(); }
 
-    Vector3 GetPosition() const { return m_Spring.GetPosition(); }
+    //
+    Vector3 GetAimPoint() const override;
+
+    // FollowCameraComponent.h の public に追加
+    DirectX::SimpleMath::Vector2 GetReticleScreen() const { return m_ReticleScreen; }
 
     DirectX::SimpleMath::Vector3 GetAimDirectionFromReticle() const;
 
@@ -64,9 +75,14 @@ public:
 
 private:
 
+    DirectX::SimpleMath::Vector2 m_ReticleScreen{ 440.0f, 160.0f };
+
     void UpdateCameraPosition(float dt);
 
     GameObject* m_Target = nullptr;   //カメラが追従する対象(プレイヤーなど)のポインタ
+
+    float m_reticleMarginX = 160.0f; // 左右マージン
+    float m_reticleMarginY = 90.0f;  // 上下マージン
 
     float m_DefaultDistance = 15.0f;  //追従対象の後方にどのぐらいにカメラがいるのか
     float m_DefaultHeight = 3.5f;     //追従対象からどのぐらい高い所にカメラがいるのか
@@ -89,9 +105,9 @@ private:
 
     SpringVector3 m_Spring;     //カメラ位置をスプリングで滑らかに追従させるラッパー
 
-    Vector2 m_ReticleScreen = Vector2(0.0f, 0.0f); // クライアント座標（px）
+    //Vector2 m_ReticleScreen = Vector2(0.0f, 0.0f); // クライアント座標（px）
     Vector3 m_AimPoint = Vector3::Zero;            //レティクルが指すワールド座標
-    float m_AimPlaneDistance = 50.0f;              //レイと交差させる「カメラ前方の平面までの距離」
+    float m_AimPlaneDistance = 300.0f;              //レイと交差させる「カメラ前方の平面までの距離」
 
     float m_LookAheadDistance = 8.0f;    // どれだけ前方（レティクル方向）を注視するか（画面内でプレイヤーをずらす量）
     float m_LookAheadLerp = 10.0f;       // lookTarget のスムーズ度合い
@@ -99,8 +115,10 @@ private:
     Vector3 m_LookTarget = Vector3::Zero;
 
     // --- 追加メンバ: レティクルに応じたカメラの横シフト量（チューニング用） ---
-    float m_ScreenOffsetScale = 16.0f; // 画面幅 1.0 正規化あたりのワールド単位換算（調整可）
-    float m_MaxScreenOffset = 20.0f;  // 最大シフト（ワールド単位）
+    float m_ScreenOffsetScale = 20.0f; // 画面幅 1.0 正規化あたりのワールド単位換算（調整可）
+    float m_MaxScreenOffset   = 24.0f;  // 最大シフト（ワールド単位）
+
+    float m_LookVerticalScale = 4.0f;   // 値を大きくすると上下移動が派手になる
 
     float m_PrevPlayerYaw = 0.0f;
     float m_TurnOffsetScale = 8.0f;   // yawSpeed -> ワールド横オフセット換算（調整用）

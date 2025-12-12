@@ -43,6 +43,10 @@ public:
 	//現在シーンの描画処理をする関数
 	static void Draw(float deltatime);
 
+	//UIとワールドに置いてあるオブジェクトとを別で描画
+	static void DrawWorld(float deltatime);
+	static void DrawUI(float deltatime);
+
 	//シーンマネージャーの初期化をする関数
 	static void Init();
 

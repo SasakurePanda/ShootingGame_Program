@@ -21,7 +21,7 @@ static float RandFloatStd(std::mt19937_64& rng, float a, float b)
     return d(rng);
 }
 
-int BuildingSpawner::Spawn(const BuildingConfig& cfg)
+int BuildingSpawner::RandomSpawn(const BuildingConfig& cfg)
 {
     if (!m_scene) { return 0; }
 
@@ -65,7 +65,7 @@ int BuildingSpawner::Spawn(const BuildingConfig& cfg)
                 }
             }
 
-            if (overlap) { continue; }// 衝突なら別の候補を試す
+            if (overlap) { continue; }  //衝突なら別の候補を試す
 
             // 衝突しなければ実際にオブジェクトを作成してシーンに追加する
             auto obj = std::make_shared<Building>();
@@ -77,7 +77,7 @@ int BuildingSpawner::Spawn(const BuildingConfig& cfg)
 
             //コライダー（OBB）を追加。baseColliderSize に scale を乗算
             auto col = std::make_shared<AABBColliderComponent>();
-            col->SetSize({ 3.0f, 17.0f, 3.0f });
+            col->SetSize({ 3.5f, 16.5f, 3.5f });
             col->SetEnabled(false);
             obj->AddComponent(col);
             col->isStatic = true;
@@ -115,4 +115,96 @@ int BuildingSpawner::Spawn(const BuildingConfig& cfg)
 
     return placedCount;
 
+}
+
+int BuildingSpawner::Spawn(const BuildingConfig& cfg)
+{
+    if (!m_scene) { return 0; }
+
+    m_placed.clear();   // ひとまずこの呼び出しで配置した矩形だけを見る
+
+    // 置く数は fixedPositions の数と count の小さい方
+    int numPositions = static_cast<int>(cfg.fixedPositions.size());
+    if (numPositions <= 0) { return 0; }
+
+    int numToSpawn = numPositions;
+    if (cfg.count > 0 && cfg.count < numToSpawn)
+    {
+        numToSpawn = cfg.count;
+    }
+
+    int placedCount = 0;
+
+    for (int i = 0; i < numToSpawn; ++i)
+    {
+        DirectX::SimpleMath::Vector3 pos = cfg.fixedPositions[i];
+
+        float x = pos.x;
+        float z = pos.z;
+
+        // footprint（XZ）の半幅を計算（spacing も足す）
+        float halfW = (cfg.footprintSizeX * 0.5f) + cfg.spacing * 0.5f;
+        float halfD = (cfg.footprintSizeZ * 0.5f) + cfg.spacing * 0.5f;
+
+        // 既に配置したものと矩形衝突しないかチェック（XZ平面）
+        bool overlap = false;
+        for (const auto& pr : m_placed)
+        {
+            if (std::fabs(x - pr.cx) < (halfW + pr.halfW) &&
+                std::fabs(z - pr.cz) < (halfD + pr.halfD))
+            {
+                overlap = true;
+                break;
+            }
+        }
+
+        if (overlap)
+        {
+            // ここでは「重なりそうならスキップ」としておく
+            // 必要ならログだけ出して強制配置、などに変えても OK
+            char buf[256];
+            sprintf_s(buf, "WARN: BuildingSpawner::Spawn overlap at index %d, skip.\n", i);
+            OutputDebugStringA(buf);
+            continue;
+        }
+
+        // 実際のオブジェクト生成処理（RandomSpawn と合わせておく）
+        auto obj = std::make_shared<Building>();
+        obj->SetScene(m_scene);
+
+        // Y は fixedPositions の y をそのまま使う
+        // これまで通りにしたいなら pos.y の代わりに -12.0f に固定しても良いです
+        obj->SetPosition({ x, pos.y, z });
+
+        // ★今は固定値ですが、必要なら cfg.minScale / maxScale から計算しても OK
+        obj->SetScale({ 10.0f, 10.0f, 10.0f });
+        obj->SetRotation({ 0.0f, 0.0f, 0.0f });
+
+        // コライダー（AABB）を追加
+        auto col = std::make_shared<AABBColliderComponent>();
+        col->SetSize({ 3.5f, 16.5f, 3.5f });
+        col->SetEnabled(false);
+        obj->AddComponent(col);
+        col->isStatic = true;
+
+        // モデルを読み込む
+        auto mc = std::make_shared<ModelComponent>();
+        mc->LoadModel(cfg.modelPath);
+        obj->AddComponent(mc);
+
+        obj->Initialize();
+        m_scene->AddObject(obj);
+
+        // footprint を記録
+        PlacedRect pr;
+        pr.cx = x;
+        pr.cz = z;
+        pr.halfW = halfW;
+        pr.halfD = halfD;
+        m_placed.push_back(pr);
+
+        ++placedCount;
+    }
+
+    return placedCount;
 }

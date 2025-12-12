@@ -5,7 +5,9 @@
 #include <iostream>
 #include <cmath>
 #include <algorithm>
+#include <DirectXMath.h>
 
+using namespace DirectX;
 using namespace DirectX::SimpleMath;
 
 static float LerpExpFactor(float k, float dt)
@@ -30,7 +32,7 @@ void MoveComponent::Initialize()
 {
     if (GetOwner())
     {
-		//前フレームのyawを保存
+        //前フレームのyawを保存
         m_prevYaw = GetOwner()->GetRotation().y;
     }
     else
@@ -81,7 +83,7 @@ void MoveComponent::Update(float dt)
     {
         m_isBoosting = true;    //ブースト開始
         m_boostTimer = 0.0f;    //経過時間リセット
-        m_recoverTimer = -1.0f; 
+        m_recoverTimer = -1.0f;
         m_cooldownTimer = m_boostCooldown;  //
         //カメラの動きにも関係があるので送る
         if (m_camera)
@@ -141,10 +143,10 @@ void MoveComponent::Update(float dt)
     }
 
     //--------------------レティクル方向の計算--------------------
-     
+
     //カメラ側でレティクルのワールド座標を返す
     Vector3 aimTarget = m_camera->GetAimPoint();
-    
+
     //プレイヤー位置からレティクルのワールド座標へのベクトル
     Vector3 toTarget = aimTarget - pos;
 
@@ -152,8 +154,8 @@ void MoveComponent::Update(float dt)
     {
         //目標点がほぼ現在位置なら、今の向きで進むだけ
         Vector3 forward(std::sin(currentYaw) * std::cos(currentPitch),
-                        std::sin(currentPitch),
-                        std::cos(currentYaw) * std::cos(currentPitch));
+            std::sin(currentPitch),
+            std::cos(currentYaw) * std::cos(currentPitch));
         forward.Normalize();
 
         //移動速度ベクトル = 前方向ベクトル * 今の移動スピード + 外部からかかる力 
@@ -185,6 +187,44 @@ void MoveComponent::Update(float dt)
     Vector3 desired = toTarget;
     desired.Normalize();
 
+    // 現在の yaw だけから「前方」と「右方向」の基準ベクトルを作る
+    Vector3 forwardYaw(
+        std::sin(currentYaw),
+        0.0f,
+        std::cos(currentYaw)
+    );
+    if (forwardYaw.LengthSquared() > 1e-6f)
+    {
+        forwardYaw.Normalize();
+    }
+    else
+    {
+        forwardYaw = Vector3(0, 0, 1);
+    }
+
+    Vector3 rightYaw = Vector3::Up.Cross(forwardYaw);   // ← メンバー関数で呼ぶ
+    if (rightYaw.LengthSquared() > 1e-6f)
+    {
+        rightYaw.Normalize();
+    }
+
+    // desired を「前方向・右方向・上下」に分解
+    float f = desired.Dot(forwardYaw); // 前後成分
+    float r = desired.Dot(rightYaw);   // 左右成分
+    float u = desired.y;               // 上下成分
+
+    // ★ 左右成分だけ弱める（0.0～1.0 で調整）
+    const float lateralScale = 0.4f;   // 小さいほど左右への曲がりが弱くなる
+    r *= lateralScale;
+
+    // 弱めた左右成分で方向ベクトルを再構成
+    Vector3 blended = forwardYaw * f + rightYaw * r + Vector3(0.0f, u, 0.0f);
+    if (blended.LengthSquared() > 1e-6f)
+    {
+        blended.Normalize();
+        desired = blended;
+    }
+
     if (desired.LengthSquared() < 1e-6f)
     {
         //保険
@@ -193,19 +233,58 @@ void MoveComponent::Update(float dt)
 
     //------------------------目標ヨー/ピッチを計算-----------------------
     //XZ平面上で前方向(z軸)にどれだけ回っているか(左右)
-    float targetYaw   = std::atan2(desired.x, desired.z);
+    float targetYaw = std::atan2(desired.x, desired.z);
 
     //
-    float horiz       = std::sqrt(desired.x * desired.x + desired.z * desired.z);
+    float horiz = std::sqrt(desired.x * desired.x + desired.z * desired.z);
 
     //Y軸と水平成分の長さで水平面(XZ)に対してどれくらい上を向いているか
     float targetPitch = std::atan2(desired.y, horiz);
 
     //目標のヨー角と現在のヨー角を比べて-180～+180の範囲に収める
-    float deltaYaw   = NormalizeAngleDelta(targetYaw - currentYaw);
+    float deltaYaw = NormalizeAngleDelta(targetYaw - currentYaw);
 
     //目標のピッチ角と現在のピッチ角を比べて-180～+180の範囲に収める
     float deltaPitch = NormalizeAngleDelta(targetPitch - currentPitch);
+
+    //================= 4.5 小さな入力にはあまり反応しない「デッドゾーン＋カーブ」 =================
+    auto ApplyDeadZoneAndCurve = [](float delta,
+        float deadZone,   // ここまではほぼ動かない
+        float softZone)   // ここから先は普通に動く
+        {
+            float sign = (delta >= 0.0f) ? 1.0f : -1.0f;
+            float mag = std::fabs(delta);
+
+            // 1) デッドゾーン：この範囲内なら完全に 0 扱い
+            if (mag <= deadZone)
+            {
+                return 0.0f;
+            }
+
+            // 2) deadZone ～ softZone の間は「少しだけ効く」
+            //    softZone を超えたらフルの効き
+            float t = (mag - deadZone) / max(softZone - deadZone, 1e-6f);
+            t = std::clamp(t, 0.0f, 1.0f);
+
+            // 3) t に対してカーブをかける
+            //    t       : ほぼ線形
+            //    t * t   : 小さいとき弱く、大きいとき強く（おすすめ）
+            //    t * t * t: さらに寝かせたいとき
+            float curve = t * t;
+
+            float curvedMag = mag * curve;
+
+            return sign * curvedMag;
+        };
+
+    // ※ 数値はお好みで。とりあえずの例（XMConvertToRadians を使うので <DirectXMath.h> が必要）
+    const float yawDeadZone = DirectX::XMConvertToRadians(3.0f);   // 3度まではほぼ反応しない
+    const float yawSoftZone = DirectX::XMConvertToRadians(13.0f);  // 20度でフル感度
+    const float pitchDeadZone = DirectX::XMConvertToRadians(2.0f);   // ピッチは少し敏感に
+    const float pitchSoftZone = DirectX::XMConvertToRadians(15.0f);
+
+    deltaYaw = ApplyDeadZoneAndCurve(deltaYaw, yawDeadZone, yawSoftZone);
+    deltaPitch = ApplyDeadZoneAndCurve(deltaPitch, pitchDeadZone, pitchSoftZone);
 
     //------------------ヨー/ピッチをスムーズに追従させる------------------
     //ヨーの指数補間係数でどんな感じで動くか決める
@@ -218,15 +297,15 @@ void MoveComponent::Update(float dt)
     float pitchAlpha = LerpExpFactor(pitchSmoothK, dt);
 
     //回転のマックス量設定
-    float maxYawChange   = m_rotateSpeed * dt;
-    float maxPitchChange = m_pitchSpeed  * dt;
+    float maxYawChange = m_rotateSpeed * dt;
+    float maxPitchChange = m_pitchSpeed * dt;
 
     //ブースト中なら
     if (m_isBoosting)
     {
         //あんまり勢いよく回転しないようにする
         float boostTurnFactor = 0.5f;
-        maxYawChange   *= boostTurnFactor;
+        maxYawChange *= boostTurnFactor;
         maxPitchChange *= boostTurnFactor;
     }
 
@@ -238,8 +317,8 @@ void MoveComponent::Update(float dt)
 
     //----------------------新しい前方ベクトル----------------------
     Vector3 newForward(std::sin(currentYaw) * std::cos(currentPitch),
-                       std::sin(currentPitch),
-                       std::cos(currentYaw) * std::cos(currentPitch));
+        std::sin(currentPitch),
+        std::cos(currentYaw) * std::cos(currentPitch));
 
     if (newForward.LengthSquared() > 1e-6f)
     {
@@ -263,11 +342,11 @@ void MoveComponent::Update(float dt)
 
     // 「ほぼまっすぐ」の判定用しきい値（必要に応じて調整）
     const float lateralDeadZone = 0.05f; // 横方向のずれがこの範囲内なら無視
-    const float yawDeadZone = 0.25f; // ヨー回転速度がこの範囲内なら無視
+    const float yawDeadZoneRoll = 0.25f; // ヨー回転速度がこの範囲内なら無視
 
     // ★カーソルを動かしていない＝ほぼ直進 → ロールを0に戻すだけ★
     if (std::fabs(lateral) < lateralDeadZone &&
-        std::fabs(yawSpeed) < yawDeadZone)
+        std::fabs(yawSpeed) < yawDeadZoneRoll)
     {
         // 目標ロール 0 に向かって指数的に戻す
         float rollAlpha = LerpExpFactor(m_rollLerpK, dt);
@@ -287,8 +366,9 @@ void MoveComponent::Update(float dt)
         rawRoll = std::clamp(rawRoll, -m_maxVisualRoll, m_maxVisualRoll);
 
         float rollAlpha = LerpExpFactor(m_rollLerpK, dt);
-        m_currentRoll = 0.0f;
+        m_currentRoll = m_currentRoll + (rawRoll - m_currentRoll) * rollAlpha;
     }
+
     //================= 8. 見た目用の縦揺れ（いらなければ全部0にしてもOK） =================
     float vertComponent = newForward.y * currentSpeed;
     float pitchTargetTilt =
@@ -334,7 +414,6 @@ void MoveComponent::Update(float dt)
 
     m_currentPitch = currentPitch;
 }
-
 void MoveComponent::HandleCollisionCorrection(
     const DirectX::SimpleMath::Vector3& push,
     const DirectX::SimpleMath::Vector3& contactNormal)
@@ -368,7 +447,7 @@ void MoveComponent::HandleCollisionCorrection(
         }
         else
         {
-            
+
             tmp = Vector3::Up;
         }
         n = tmp;

@@ -1,6 +1,7 @@
 #include <iostream>
 #include "Enemy.h"
 #include "Bullet.h"
+#include "HitPointCompornent.h"
 
 void Enemy::Initialize()
 {
@@ -9,6 +10,9 @@ void Enemy::Initialize()
 
 void Enemy::Update(float dt)
 {
+    auto hp = GetComponent<HitPointComponent>();
+    std::cout << "敵のHP：" << hp->GetHP() << std::endl;
+
     //コンポーネント等のUpdate
     GameObject::Update(dt);
 }
@@ -26,12 +30,21 @@ void Enemy::OnCollision(GameObject* other)
     {
         if (bulletComp->GetBulletType() == BulletComponent::BulletType::PLAYER)
         { 
-            // Player弾に当たったらそのEnemyも弾も削除
-            if (auto scene = GetScene())
+            auto hp = GetComponent<HitPointComponent>();
+            
+            DamageInfo di;
+            di.amount = 1;
+            di.instigator = other;
+            di.tag = "player_bullet";
+            bool applied = hp->ApplyDamage(di);
+
+            if (hp->GetHP() <= 0)
             {
-                scene->RemoveObject(this); // GameScene::RemoveObject(GameObject*) があるはず
-                scene->RemoveObject(other);
-                
+                if (auto scene = GetScene())
+                {
+                    scene->RemoveObject(this); // GameScene::RemoveObject(GameObject*) があるはず
+                    scene->RemoveObject(other);
+                }
             }
         }
     }

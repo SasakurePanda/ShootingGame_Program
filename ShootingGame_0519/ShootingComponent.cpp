@@ -1,5 +1,6 @@
 ﻿#include "ShootingComponent.h"
 #include "Bullet.h"
+#include "Enemy.h"
 #include "Input.h"
 #include "GameObject.h"
 #include "IScene.h"
@@ -9,6 +10,121 @@
 #include <DirectXMath.h>
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
+
+void ShootingComponent::FireHomingBullet(GameObject* owner, const std::shared_ptr<GameObject>& targetSp)
+{
+    // プレイヤーの前方向
+    Vector3 forward = owner->GetForward();
+    if (forward.LengthSquared() < 1e-6f) forward = Vector3::UnitZ;
+    else forward.Normalize();
+
+    // マズル位置
+    Vector3 muzzleLocal(0.0f, 0.0f, m_spawnOffset);
+    Vector3 rot = owner->GetRotation();
+    Matrix rotM = Matrix::CreateFromYawPitchRoll(rot.y, rot.x, rot.z);
+    Vector3 spawnPos = owner->GetPosition() + Vector3::Transform(muzzleLocal, rotM);
+
+    // 最初は前方に撃つ（ちょっとだけターゲット方向に寄せてもOK）
+    Vector3 initialDir = forward;
+
+    auto bullet = CreateBullet(spawnPos, initialDir, m_homingBulletColor, targetSp);
+    if (bullet)
+    {
+        if (auto bc = bullet->GetComponent<BulletComponent>())
+        {
+            bc->SetVelocity(initialDir);
+            bc->SetSpeed(m_bulletSpeed);
+            bc->SetBulletType(BulletComponent::PLAYER);
+            bc->SetHomingStrength(m_homingStrength);
+            bc->SetTarget(targetSp);
+        }
+        AddBulletToScene(bullet);
+    }
+
+    // クールタイム（もしホーミングに専用CDを付けたいならここで）
+    m_timer = 0.0f;
+}
+
+
+std::shared_ptr<GameObject> ShootingComponent::FindBestHomingTarget()
+{
+    if(!m_scene || !m_camera) { return nullptr; }
+
+    const auto& objects = m_scene->GetObjects();
+
+    float screenW = static_cast<float>(Application::GetWidth());
+    float screenH = static_cast<float>(Application::GetHeight());
+    float cx = screenW * 0.5f;
+    float cy = screenH * 0.5f;
+
+    //画面中央周辺だけを対象にするための半径を設定
+    float maxScreenRadius = 400.0f;
+
+    Matrix view = m_camera->GetView();
+    Matrix proj = m_camera->GetProj();
+    XMMATRIX viewXM = XMLoadFloat4x4(reinterpret_cast<const XMFLOAT4X4*>(&view));
+    XMMATRIX projXM = XMLoadFloat4x4(reinterpret_cast<const XMFLOAT4X4*>(&proj));
+    XMMATRIX worldXM = XMMatrixIdentity();
+
+    std::shared_ptr<GameObject> bestTarget;
+    float bestScore = FLT_MAX;
+
+    for (auto& obj : objects)
+    {
+        if (!obj) continue;
+
+        if (!std::dynamic_pointer_cast<Enemy>(obj)) { continue; }
+
+        Vector3 worldPos = obj->GetPosition();
+
+        //ワールド座標をスクリーン座標に変換する
+        XMVECTOR screenPos = XMVector3Project(XMLoadFloat3(reinterpret_cast<const XMFLOAT3*>(&worldPos)),
+                                              0.0f, 0.0f, screenW, screenH, 0.0f, 1.0f,projXM, viewXM, worldXM);
+
+        //0～1の範囲になら前にいる、1以上または負の数なら
+        float sx = XMVectorGetX(screenPos);
+        float sy = XMVectorGetY(screenPos);
+        float sz = XMVectorGetZ(screenPos); 
+
+        //カメラの前方にいないなら
+        if (sz < 0.0f || sz > 1.0f) { continue; }
+
+        //画面内かざっくりチェック
+        if (sx < 0.0f || sx > screenW || sy < 0.0f || sy > screenH) { continue; }
+
+        //中央からの距離でスコアをつける（中央に近いほど優先）
+        float dx = sx - cx;
+        float dy = sy - cy;
+        float dist2 = dx * dx + dy * dy;
+
+        if (dist2 > maxScreenRadius * maxScreenRadius) { continue; }
+
+        if (dist2 < bestScore)
+        {
+            bestScore = dist2;
+            bestTarget = obj;
+        }
+    }
+
+    return bestTarget;
+}
+
+//m_selectedTargetsになにかしらが入っていれば
+std::weak_ptr<GameObject> ShootingComponent::ChooseHomingTarget() const
+{
+    //選択中ターゲットから生きているもの
+    for (const auto& w : m_selectedTargets)
+    {
+        if (!w.expired())
+        {
+            return w;
+        }
+    }
+
+    // 見つからない
+    return std::weak_ptr<GameObject>();
+}
+
 
 static bool GetMouseRayWorld(ICameraViewProvider* camera,
                              const POINT& mousePos,
@@ -89,6 +205,69 @@ void ShootingComponent::Update(float dt)
     GameObject* owner = GetOwner();
     if (!owner) { return; }
 
+    //-------------ホーミング弾処理開始-----------------
+    bool cDown = Input::IsKeyDown('C');   // もしくは VK_C でもOK
+    bool justPressedC = (cDown && !m_prevHomingKeyDown);
+    m_prevHomingKeyDown = cDown;
+
+    if (justPressedC)
+    {
+        // クールタイムが終わっているか
+        if (m_timer >= m_cooldown)
+        {
+            // 画面上からターゲットを探す（実装済みを想定）
+            std::shared_ptr<GameObject> targetSp = FindBestHomingTarget();
+            if (targetSp)
+            {
+                // --- プレイヤー前方・発射位置計算 ---
+                Vector3 forward = owner->GetForward();
+                if (forward.LengthSquared() < 1e-6f)
+                    forward = Vector3::UnitZ;
+                else
+                    forward.Normalize();
+
+                // 発射位置（マズルオフセット）
+                Vector3 muzzleLocal(0.0f, 0.0f, m_spawnOffset);
+                Vector3 rot = owner->GetRotation();
+                Matrix rotM = Matrix::CreateFromYawPitchRoll(rot.y, rot.x, rot.z);
+                Vector3 spawnPos = owner->GetPosition() + Vector3::Transform(muzzleLocal, rotM);
+
+                // 初期方向：ターゲットの現在位置へまっすぐ
+                Vector3 toTarget = targetSp->GetPosition() - spawnPos;
+                if (toTarget.LengthSquared() < 1e-6f)
+                    toTarget = forward;
+                toTarget.Normalize();
+
+                // 弾生成
+                auto bullet = CreateBullet(spawnPos, toTarget);
+                if (bullet)
+                {
+                    if (auto bc = bullet->GetComponent<BulletComponent>())
+                    {
+                        bc->SetVelocity(toTarget);
+                        bc->SetSpeed(750);
+
+                        // ★ここがホーミングのキモ
+                        bc->SetTarget(targetSp);                  // 追尾相手をセット
+                        bc->SetHomingStrength(m_homingStrength); // 追尾の強さ
+                        bc->SetBulletType(BulletComponent::PLAYER);
+
+                        // 色を変えたいなら、ここで色も渡す（Draw側にAPIがあれば）
+                        // bc->SetColor(m_homingBulletColor); みたいな感じで
+                    }
+                    AddBulletToScene(bullet);
+                }
+
+                // クールタイムリセット
+                m_timer = 0.0f;
+
+                // Cで撃ったときはここで return してもOK（SPACE射撃と混ぜたくない場合）
+                return;
+            }
+            // ターゲットが見つからなかったら何もしない（or 通常弾にフォールバックでもOK）
+        }
+    }
+
     // 発射入力（SPACE 押しっぱなしで連射）
     bool wantFire = m_autoFire || Input::IsKeyDown(VK_SPACE);
     if (!wantFire) { return; }
@@ -96,46 +275,80 @@ void ShootingComponent::Update(float dt)
     // クールタイム未経過なら撃たない
     if (m_timer < m_cooldown) { return; }
 
-    // ========= プレイヤー前方向 =========
-    Vector3 forward = owner->GetForward();
-    if (forward.LengthSquared() < 1e-6f)
+    // ---------- カメラが無いとどうにもならないのでフォールバック ----------
+    if (!m_camera)
     {
-        forward = Vector3::UnitZ;
+        // 仕方ないので従来通り「プレイヤー前方に撃つ」
+        Vector3 forward = owner->GetForward();
+        if (forward.LengthSquared() < 1e-6f)
+            forward = Vector3::UnitZ;
+        else
+            forward.Normalize();
+
+        Vector3 muzzleLocal(0.0f, 0.0f, m_spawnOffset);
+        Vector3 rot = owner->GetRotation();
+        Matrix  rotM = Matrix::CreateFromYawPitchRoll(rot.y, rot.x, rot.z);
+        Vector3 spawnPos = owner->GetPosition() + Vector3::Transform(muzzleLocal, rotM);
+
+        auto bullet = CreateBullet(spawnPos, forward, m_normalBulletColor);
+        if (bullet)
+        {
+            if (auto bc = bullet->GetComponent<BulletComponent>())
+            {
+                bc->SetVelocity(forward);
+                bc->SetSpeed(m_bulletSpeed);
+            }
+            AddBulletToScene(bullet);
+        }
+
+        m_timer = 0.0f;
+        return;
+    }
+
+    // ---------- ここから本命：カメラレイ上に「プレイヤー前に近い点」を取る ----------
+
+    //カメラ位置 & レティクル方向（Vテスト弾と同じ）
+    Vector3 camPos = m_camera->GetPosition();
+    Vector3 camDir = m_camera->GetAimDirectionFromReticle();
+    if (camDir.LengthSquared() < 1e-6f)
+    {
+        camDir = m_camera->GetForward();
+    }
+    camDir.Normalize();
+
+    //「プレイヤーの前あたり」の目安位置（マズル近く）
+    Vector3 ownerForward = owner->GetForward();
+    if (ownerForward.LengthSquared() < 1e-6f)
+    {
+        ownerForward = Vector3::UnitZ;
     }
     else
     {
-        forward.Normalize();
+        ownerForward.Normalize();
     }
 
-    // ========= 発射位置（マズル） =========
-    Vector3 muzzleLocal(0.0f, 0.0f, m_spawnOffset);
+    // プレイヤーの前方 m_spawnOffset の位置を「銃口の目安」とする
+    Vector3 muzzleGuess = owner->GetPosition() + ownerForward * m_spawnOffset;
 
-    // Player の回転（YawPitchRoll ベース）
-    Vector3 rot = owner->GetRotation();
-    Matrix rotM = Matrix::CreateFromYawPitchRoll(rot.y, rot.x, rot.z);
+    // 3) カメラレイ上で muzzleGuess に一番近い点を求める
+    Vector3 camToMuzzle = muzzleGuess - camPos;
+    //レイ上の最近接点
+    float t = camToMuzzle.Dot(camDir);
 
-    // ワールド位置
-    Vector3 spawnPos = owner->GetPosition() + Vector3::Transform(muzzleLocal, rotM);
-
-    // ========= AimPoint から弾の向きを決める =========
-    Vector3 aimDir = forward; // デフォルトは前方
-
-    if (m_camera)
+    // カメラのすぐ近くや後ろになるのを防ぐため、ある程度前方にクランプ
+    if (t < 1.0f)
     {
-        // カメラが計算している「レティクルの先の 3D 位置」
-        Vector3 aimPoint = m_camera->GetAimPoint();
-
-        // 銃口 → AimPoint 方向
-        Vector3 toAim = aimPoint - spawnPos;
-        if (toAim.LengthSquared() > 1e-6f)
-        {
-            toAim.Normalize();
-            aimDir = toAim;
-        }
+        t = 1.0f;
     }
 
-    // ========= 弾生成 =========
-    auto bullet = CreateBullet(spawnPos, aimDir);
+    //この点が実際の弾の出発位置（カメラレイ上なので、レティクル線と完全一致）
+    Vector3 spawnPos = camPos + camDir * t;
+
+    //方向は V 弾と同じく camDir
+    Vector3 aimDir = camDir;
+
+    //弾生成
+    auto bullet = CreateBullet(spawnPos, aimDir, m_normalBulletColor);
     if (bullet)
     {
         if (auto bc = bullet->GetComponent<BulletComponent>())
@@ -143,16 +356,16 @@ void ShootingComponent::Update(float dt)
             bc->SetVelocity(aimDir);
             bc->SetSpeed(m_bulletSpeed);
         }
-
         AddBulletToScene(bullet);
     }
 
-    // クールタイムリセット
+    //クールタイムリセット
     m_timer = 0.0f;
+
 }
 
-
-std::shared_ptr<GameObject> ShootingComponent::CreateBullet(const Vector3& pos, const Vector3& dir)
+std::shared_ptr<GameObject> ShootingComponent::CreateBullet(const Vector3& pos,const Vector3& dir,
+                                                            const Vector4& color, std::weak_ptr<GameObject> target)
 {
     // GameObject を継承した Bullet を生成
     auto bullet = std::make_shared<Bullet>();
@@ -174,10 +387,17 @@ std::shared_ptr<GameObject> ShootingComponent::CreateBullet(const Vector3& pos, 
         }
         d.Normalize();
 
-		//std::cout << "弾の方向: (" << d.x << ", " << d.y << ", " << d.z << ")\n";
+        bc->SetVelocity(d);                     // 方向（正規化）
+        bc->SetSpeed(m_bulletSpeed);            // 速さ
+        bc->SetBulletType(BulletComponent::PLAYER);
+        bc->SetColor(color);                    // ★ 色を渡す
 
-        bc->SetVelocity(d);          // 方向（正規化）
-        bc->SetSpeed(m_bulletSpeed); // 速さ
+        //ターゲットがある場合はホーミング設定
+        if (!target.expired())
+        {
+            bc->SetTarget(target);
+            bc->SetHomingStrength(m_homingStrength);
+        }
     }
 
     return bullet;

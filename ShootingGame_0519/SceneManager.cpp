@@ -134,6 +134,26 @@ void SceneManager::Draw(float deltatime)
     DebugUI::Render();
 }
 
+void SceneManager::DrawWorld(float deltatime)
+{
+    if (!m_currentSceneName.empty() && m_scenes.count(m_currentSceneName))
+    {
+        m_scenes[m_currentSceneName]->DrawWorld(deltatime);
+    }   // 各シーンで3Dオブジェクトだけ描く
+}
+
+void SceneManager::DrawUI(float deltatime)
+{
+    //現在シーンを描画
+    if (!m_currentSceneName.empty() && m_scenes.count(m_currentSceneName))
+    {
+        m_scenes[m_currentSceneName]->DrawUI(deltatime);
+    }
+
+    // デバッグUIの描画
+    DebugUI::Render();
+}
+
 
 void SceneManager::Uninit()
 {

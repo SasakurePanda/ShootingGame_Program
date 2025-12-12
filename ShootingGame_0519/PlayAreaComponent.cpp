@@ -37,10 +37,6 @@ Vector3 PlayAreaComponent::ResolvePosition(const Vector3& prevPos,
     {
         out.y = groundH;
     }
-
-    // 3) 簡易衝突チェック：小範囲で地面の法線や障害物があればここで補正可能
-    //    例えば、重なりが酷ければ prevPos に戻す、とか別途レイ投げて傾斜に沿わせる等。
-
     return out;
 }
 

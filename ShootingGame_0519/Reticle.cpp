@@ -42,31 +42,43 @@ void Reticle::Initialize()
 
 void Reticle::Update(float dt)
 {
-    // マウス入力でドラッグ処理（Input::Update() は GameScene 側で呼んでいる想定）
-    // 押した瞬間にドラッグ開始
+    float screenW = static_cast<float>(Application::GetWidth());
+    float screenH = static_cast<float>(Application::GetHeight());
+
+    // ★ マージンはもう使わないので全部消す or 0 にする
+    // float marginX = 160.0f;
+    // float marginY = 90.0f;
+
     if (Input::IsMouseLeftPressed())
     {
         m_isDragging = true;
     }
 
-    // 押している間は追従
     if (m_isDragging && Input::IsMouseLeftDown())
     {
-        POINT p = Input::GetMousePosition(); // クライアント座標
-        m_pos.x = static_cast<float>(p.x);
-        m_pos.y = static_cast<float>(p.y);
+        POINT p = Input::GetMousePosition();
 
-        // TextureComponent は左上基準なので補正して渡す
-        float left = m_pos.x - m_size * 0.5f;
-        float top = m_pos.y - m_size * 0.5f;
+        // ★ クランプせずそのまま使う
+        float cx = static_cast<float>(p.x);
+        float cy = static_cast<float>(p.y);
+
+        // 画面外に行くのだけは嫌なら、画面サイズでだけクランプする
+        cx = std::clamp(cx, 0.0f, screenW);
+        cy = std::clamp(cy, 0.0f, screenH);
+
+        m_pos.x = cx;
+        m_pos.y = cy;
+
+        float left = cx - m_size * 0.5f;
+        float top = cy - m_size * 0.5f;
         if (m_texture) m_texture->SetScreenPosition(left, top);
+
+        camera = { cx ,cy };
     }
 
-    // 離したら固定してドラッグ終了
     if (!Input::IsMouseLeftDown() && m_isDragging)
     {
         m_isDragging = false;
-        // 最終位置は m_pos のまま（置いたまま）
     }
 }
 

@@ -49,9 +49,6 @@ void GameObject::Uninit()
 void GameObject::AddComponent(std::shared_ptr<Component> comp) 
 {
     if (!comp) { return; }
-    char buf[256];
-    sprintf_s(buf, "DEBUG: AddComponent called for owner=%p comp=%s ptr=%p\n",(void*)this, typeid(*comp).name(), (void*)comp.get());
-    OutputDebugStringA(buf);
 
     comp->SetOwner(this);
     m_components.push_back(comp);

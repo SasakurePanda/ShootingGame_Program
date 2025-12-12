@@ -31,5 +31,6 @@ public:
     virtual void SetBoostState(bool isBoosting) { /* default: ignore */ }
 
     virtual SMS::Vector2 GetReticleScreen() const = 0;
+
 };
 
