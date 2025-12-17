@@ -96,7 +96,7 @@ void Application::MainLoop()
     }
 
     //ƒQ[ƒ€I—¹ˆ—
-    Game::GameUninit();
+    //Game::GameUninit();
 }
 
 bool Application::InitWnd()
