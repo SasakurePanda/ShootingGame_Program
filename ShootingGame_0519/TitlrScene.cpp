@@ -5,18 +5,49 @@
 #include "TitleBackGround.h"
 #include "Input.h"
 #include "TransitionManager.h"
+#include "CameraObject.h"
+#include "FreeCameraComponent.h"
+#include "ModelComponent.h"
 
 void TitleScene::Init()
 {
-    auto background01 = std::make_shared<TitleBackGround>(L"Asset/UI/TitleBackGround.png",1280);
-    auto background02 = std::make_shared<TitleBackGround>(L"Asset/UI/TitleText.png",1280);
-    AddObject(background01);
-    AddObject(background02);
+    auto cameraObj = std::make_shared<CameraObject>();
+    auto freeCamComp = std::make_shared<FreeCameraComponent>();
+	cameraObj->AddComponent(freeCamComp);
 
-    for (auto& obj : m_AddObjects)
+	auto TestOJ = std::make_shared<GameObject>();
+    TestOJ->SetPosition(DirectX::SimpleMath::Vector3(0.0f, 0.0f, 40.0f));
+    TestOJ->SetScale(DirectX::SimpleMath::Vector3(0.3f, 0.3f, 0.3f));
+    
+    
+    auto model = std::make_shared<ModelComponent>("Asset/Model/Robot/12211_Robot_l2.obj");
+    model->SetColor(Color(1, 0, 0, 1));
+    TestOJ->AddComponent(model);
+	
+    m_SkyDome = std::make_shared<SkyDome>("Asset/SkyDome/SkyDome_03.png");
+	m_SkyDome->Initialize();
+
+	AddObject(m_SkyDome);
+	AddObject(cameraObj);
+    cameraObj->SetCameraComponent(freeCamComp);
+    AddObject(TestOJ);
+
+    SetSceneObject();
+
+    for (auto& obj : m_GameObjects)
     {
-        if (obj) obj->Initialize();
+        if (obj)
+        {
+            obj->Initialize();
+        }
     }
+    
+    if (m_SkyDome && freeCamComp)
+    {
+        m_SkyDome->SetCamera(freeCamComp.get());
+    }
+    
+    TestOJ->SetRotation(Vector3(80.0f, 0.0f, 0.0f));
 }
 
 void TitleScene::Update(float deltatime)
@@ -31,10 +62,11 @@ void TitleScene::Update(float deltatime)
         SceneManager::SetCurrentScene("GameScene");
     }
 
-
     for (auto& obj : m_GameObjects)
     {
         if (obj) obj->Update(deltatime);
+        Vector3 pos = obj->GetPosition();
+		//std::cout << "Object Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")\n";
     }
 }
 

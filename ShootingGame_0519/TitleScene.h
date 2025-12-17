@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include "IScene.h"
 #include "TitleBackGround.h"
+#include "SkyDome.h"
 
 //---------------------------------
 //ISceneÇåpè≥ÇµÇΩGameScene
@@ -26,6 +27,8 @@ private:
 	std::vector<std::shared_ptr<GameObject>> m_GameObjects;
 	std::vector<std::shared_ptr<GameObject>> m_DeleteObjects;
 	std::vector<std::shared_ptr<GameObject>> m_AddObjects;
+
+	std::shared_ptr<SkyDome> m_SkyDome;
 };
 
 
