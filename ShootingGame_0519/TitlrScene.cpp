@@ -9,6 +9,7 @@
 #include "FreeCameraComponent.h"
 #include "TitlePlayerMotionComponent.h"
 #include "ModelComponent.h"
+#include "TextureComponent.h"
 
 void TitleScene::Init()
 {
@@ -24,16 +25,32 @@ void TitleScene::Init()
     model->SetColor(Color(1, 0, 0, 1));
     TestOJ->AddComponent(model);
 
+    auto TitleLogo = std::make_shared<GameObject>();
+    auto LogoTexter = std::make_shared<TextureComponent>();
+    LogoTexter->LoadTexture(L"Asset/UI/TitleLogo01.png");
+    LogoTexter->SetSize(768, 576);
+    LogoTexter->SetScreenPosition(420, 30);
+    TitleLogo->AddComponent(LogoTexter);
+    
+
+    auto TitleText = std::make_shared<GameObject>();
+    auto TextTexter = std::make_shared<TextureComponent>();
+    TextTexter->LoadTexture(L"Asset/UI/TitleText01.png");
+    LogoTexter->SetSize(768, 576);
+    TitleText->AddComponent(TextTexter);
+
+    AddTextureObject(TitleLogo);
+    AddTextureObject(TitleText);
+
     auto motion = std::make_shared<TitlePlayerMotionComponent>();
     if (motion)
     {
-        motion->SetDuration(2.0f); // 3秒ちょいで横切る
+        motion->SetDuration(2.0f); 
         motion->SetControlPoints(
-            Vector3(-35.0f, 8.0f, 140.0f),
-            Vector3(-18.0f, 14.0f, 95.0f),
-            Vector3(22.0f, 6.0f, 62.0f),
-            Vector3(45.0f, -2.0f, 15.0f)
-        );
+            Vector3(-170.0f, 84.0f,-220.0f),
+            Vector3(-40.0f,  2.0f, -120.0f),
+            Vector3( 10.0f, -6.0f, -3.0f),
+            Vector3( 45.0f, -14.0f, 55.0f));
     }
     TestOJ->AddComponent(motion);
 
@@ -42,7 +59,7 @@ void TitleScene::Init()
 
 	AddObject(m_SkyDome);
 	AddObject(cameraObj);
-    cameraObj->SetCameraComponent(freeCamComp);
+    //cameraObj->SetCameraComponent(freeCamComp);
     AddObject(TestOJ);
 
     SetSceneObject();
@@ -83,11 +100,27 @@ void TitleScene::Update(float deltatime)
     }
 }
 
-void TitleScene::Draw(float deltatime)
+void TitleScene::Draw(float dt)
+{
+    DrawWorld(dt);
+    DrawUI(dt);
+}
+
+void TitleScene::DrawWorld(float deltatime)
 {
     for (auto& obj : m_GameObjects)
     {
-        if (obj) obj->Draw(deltatime);
+        if (!obj) { continue; }
+        obj->Draw(deltatime);
+    }
+}
+
+void TitleScene::DrawUI(float deltatime)
+{
+    for (auto& obj : m_TextureObjects)
+    {
+        if (!obj) { continue; }
+        obj->Draw(deltatime);
     }
 }
 
@@ -99,10 +132,59 @@ void TitleScene::Uninit()
 
 void TitleScene::AddObject(std::shared_ptr<GameObject> obj)
 {
-    if (!obj) return;
-    // シーン参照を GameObject に教えておく（後述）
+    if (!obj)
+    {
+        return;
+    }
+
+    //既にシーン内にいるかpendingにいるかチェック
+    auto itInScene = std::find_if(m_GameObjects.begin(), m_GameObjects.end(),
+        [&](const std::shared_ptr<GameObject>& sp) { return sp.get() == obj.get(); });
+
+    //既に実体がある
+    if (itInScene != m_GameObjects.end())
+    {
+        return;
+    }
+
+    auto itPending = std::find_if(m_AddObjects.begin(), m_AddObjects.end(),
+        [&](const std::shared_ptr<GameObject>& sp) { return sp.get() == obj.get(); });
+
+    // 追加予定にすでにある
+    if (itPending != m_AddObjects.end())
+    {
+        return;
+    }
+
+    //所属しているSceneを登録
     obj->SetScene(this);
+
+    //実際に配列にプッシュする
     m_AddObjects.push_back(obj);
+}
+
+void TitleScene::AddTextureObject(std::shared_ptr<GameObject> obj)
+{
+    if (!obj)
+    {
+        return;
+    }
+
+    //既にシーン内にいるかpendingにいるかチェック
+    auto itInScene = std::find_if(m_GameObjects.begin(), m_GameObjects.end(),
+        [&](const std::shared_ptr<GameObject>& sp) { return sp.get() == obj.get(); });
+
+    //既に実体がある
+    if (itInScene != m_GameObjects.end())
+    {
+        return;
+    }
+
+    //所属しているSceneを登録
+    obj->SetScene(this);
+
+    //実際に配列にプッシュする
+    m_TextureObjects.push_back(obj);
 }
 
 
