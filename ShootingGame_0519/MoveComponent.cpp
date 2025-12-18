@@ -278,8 +278,8 @@ void MoveComponent::Update(float dt)
         };
 
     // ※ 数値はお好みで。とりあえずの例（XMConvertToRadians を使うので <DirectXMath.h> が必要）
-    const float yawDeadZone = DirectX::XMConvertToRadians(3.0f);   // 3度まではほぼ反応しない
-    const float yawSoftZone = DirectX::XMConvertToRadians(13.0f);  // 20度でフル感度
+    const float yawDeadZone   = DirectX::XMConvertToRadians(3.0f);   // 3度まではほぼ反応しない
+    const float yawSoftZone   = DirectX::XMConvertToRadians(13.0f);  // 20度でフル感度
     const float pitchDeadZone = DirectX::XMConvertToRadians(2.0f);   // ピッチは少し敏感に
     const float pitchSoftZone = DirectX::XMConvertToRadians(15.0f);
 

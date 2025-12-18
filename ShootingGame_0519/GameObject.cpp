@@ -28,10 +28,6 @@ void GameObject::Draw(float alpha)
 
 void GameObject::Uninit()
 {
-    char buf[256];
-    sprintf_s(buf, "DEBUG: GameObject::Uninit called for obj=%p components=%zu\n", (void*)this, m_components.size());
-    OutputDebugStringA(buf);
-
     if (m_uninitialized) { return; }// “ñd‰ğ•ú–h~
     m_uninitialized = true;
 

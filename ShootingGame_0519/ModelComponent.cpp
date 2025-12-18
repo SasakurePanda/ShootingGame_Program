@@ -159,9 +159,6 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ModelComponent::LoadTextureFrom
         // 埋め込みテクスチャなら (例: "*0") ここで検出
         if (!tex.empty() && tex[0] == '*')
         {
-            // 埋め込みテクスチャへの参照 (scene->mTextures) を使うとメモリ読み出しが必要
-            // 現状はログ出力して nullptr を返す。必要ならここにメモリ->WICTex の処理を追加する。
-            OutputDebugStringA(("Embedded texture detected: " + tex + "\n").c_str());
             return nullptr;
         }
 
@@ -177,12 +174,6 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ModelComponent::LoadTextureFrom
         // 既存の TextureManager を使ってロード (UTF8 -> 変換は内部でやられている想定)
         ID3D11ShaderResourceView* srv = TextureManager::Load(fullPath);
 
-        OutputDebugStringA(("Trying to load texture: " + fullPath + "\n").c_str());
-        if (!std::filesystem::exists(fullPath)) 
-        {
-            OutputDebugStringA(("Texture NOT FOUND: " + fullPath + "\n").c_str());
-        }
-
         Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> comsrv = srv;
         return comsrv;
     }
@@ -196,12 +187,6 @@ void ModelComponent::LoadModel(const std::string& path)
     {
         std::filesystem::path p(path);
         m_directory = p.parent_path().string(); // std::string に安全に入る
-    }
-
-    // デバッグ出力
-    {
-        std::string msg = "ModelComponent::LoadModel called\n  path: " + path + "\n  directory: " + m_directory + "\n";
-        OutputDebugStringA(msg.c_str());
     }
 
     // Assimp で読み込む (将来の為に必要なフラグを追加)

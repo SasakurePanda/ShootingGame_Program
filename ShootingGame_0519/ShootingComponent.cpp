@@ -15,16 +15,22 @@ void ShootingComponent::FireHomingBullet(GameObject* owner, const std::shared_pt
 {
     // プレイヤーの前方向
     Vector3 forward = owner->GetForward();
-    if (forward.LengthSquared() < 1e-6f) forward = Vector3::UnitZ;
-    else forward.Normalize();
+    if (forward.LengthSquared() < 1e-6f)
+    {
+        forward = Vector3::UnitZ;
+    }
+    else
+    {
+        forward.Normalize();
+    }
 
-    // マズル位置
+    //発射位置計算
     Vector3 muzzleLocal(0.0f, 0.0f, m_spawnOffset);
     Vector3 rot = owner->GetRotation();
     Matrix rotM = Matrix::CreateFromYawPitchRoll(rot.y, rot.x, rot.z);
     Vector3 spawnPos = owner->GetPosition() + Vector3::Transform(muzzleLocal, rotM);
 
-    // 最初は前方に撃つ（ちょっとだけターゲット方向に寄せてもOK）
+    //最初は前方に撃つ
     Vector3 initialDir = forward;
 
     auto bullet = CreateBullet(spawnPos, initialDir, m_homingBulletColor, targetSp);
@@ -41,7 +47,7 @@ void ShootingComponent::FireHomingBullet(GameObject* owner, const std::shared_pt
         AddBulletToScene(bullet);
     }
 
-    // クールタイム（もしホーミングに専用CDを付けたいならここで）
+    //クールタイム
     m_timer = 0.0f;
 }
 
@@ -109,7 +115,6 @@ std::shared_ptr<GameObject> ShootingComponent::FindBestHomingTarget()
     return bestTarget;
 }
 
-//m_selectedTargetsになにかしらが入っていれば
 std::weak_ptr<GameObject> ShootingComponent::ChooseHomingTarget() const
 {
     //選択中ターゲットから生きているもの
@@ -212,10 +217,10 @@ void ShootingComponent::Update(float dt)
 
     if (justPressedC)
     {
-        // クールタイムが終わっているか
+        //クールタイムが終わっているか
         if (m_timer >= m_cooldown)
         {
-            // 画面上からターゲットを探す（実装済みを想定）
+            //画面上からターゲットを探す（実装済みを想定）
             std::shared_ptr<GameObject> targetSp = FindBestHomingTarget();
             if (targetSp)
             {
@@ -226,19 +231,19 @@ void ShootingComponent::Update(float dt)
                 else
                     forward.Normalize();
 
-                // 発射位置（マズルオフセット）
+                //発射位置
                 Vector3 muzzleLocal(0.0f, 0.0f, m_spawnOffset);
                 Vector3 rot = owner->GetRotation();
                 Matrix rotM = Matrix::CreateFromYawPitchRoll(rot.y, rot.x, rot.z);
                 Vector3 spawnPos = owner->GetPosition() + Vector3::Transform(muzzleLocal, rotM);
 
-                // 初期方向：ターゲットの現在位置へまっすぐ
+                //初期方向：ターゲットの現在位置へまっすぐ
                 Vector3 toTarget = targetSp->GetPosition() - spawnPos;
                 if (toTarget.LengthSquared() < 1e-6f)
                     toTarget = forward;
                 toTarget.Normalize();
 
-                // 弾生成
+                //弾生成
                 auto bullet = CreateBullet(spawnPos, toTarget);
                 if (bullet)
                 {
@@ -247,43 +252,43 @@ void ShootingComponent::Update(float dt)
                         bc->SetVelocity(toTarget);
                         bc->SetSpeed(750);
 
-                        // ★ここがホーミングのキモ
-                        bc->SetTarget(targetSp);                  // 追尾相手をセット
-                        bc->SetHomingStrength(m_homingStrength); // 追尾の強さ
+                        bc->SetTarget(targetSp);                 //追尾相手をセット
+                        bc->SetHomingStrength(m_homingStrength); //追尾の強さ
                         bc->SetBulletType(BulletComponent::PLAYER);
-
-                        // 色を変えたいなら、ここで色も渡す（Draw側にAPIがあれば）
-                        // bc->SetColor(m_homingBulletColor); みたいな感じで
                     }
                     AddBulletToScene(bullet);
                 }
 
-                // クールタイムリセット
+                //クールタイムリセット
                 m_timer = 0.0f;
 
                 // Cで撃ったときはここで return してもOK（SPACE射撃と混ぜたくない場合）
                 return;
             }
-            // ターゲットが見つからなかったら何もしない（or 通常弾にフォールバックでもOK）
         }
     }
 
-    // 発射入力（SPACE 押しっぱなしで連射）
+    //発射入力（SPACE 押しっぱなしで連射）
     bool wantFire = m_autoFire || Input::IsKeyDown(VK_SPACE);
     if (!wantFire) { return; }
 
-    // クールタイム未経過なら撃たない
+    //クールタイム未経過なら撃たない
     if (m_timer < m_cooldown) { return; }
 
-    // ---------- カメラが無いとどうにもならないのでフォールバック ----------
+    //----------カメラが無いとどうにもならないのでフォールバック-----------
+	//-------------カメラが無い場合はオーナー前方に撃つだけ----------------
     if (!m_camera)
     {
-        // 仕方ないので従来通り「プレイヤー前方に撃つ」
+        
         Vector3 forward = owner->GetForward();
         if (forward.LengthSquared() < 1e-6f)
+        {
             forward = Vector3::UnitZ;
-        else
+        }
+        else 
+        {
             forward.Normalize();
+        }
 
         Vector3 muzzleLocal(0.0f, 0.0f, m_spawnOffset);
         Vector3 rot = owner->GetRotation();
@@ -305,7 +310,7 @@ void ShootingComponent::Update(float dt)
         return;
     }
 
-    // ---------- ここから本命：カメラレイ上に「プレイヤー前に近い点」を取る ----------
+    //----------ここから本命：カメラレイ上に「プレイヤー前に近い点」を取る----------
 
     //カメラ位置 & レティクル方向（Vテスト弾と同じ）
     Vector3 camPos = m_camera->GetPosition();
