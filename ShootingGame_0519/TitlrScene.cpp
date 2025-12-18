@@ -7,6 +7,7 @@
 #include "TransitionManager.h"
 #include "CameraObject.h"
 #include "FreeCameraComponent.h"
+#include "TitlePlayerMotionComponent.h"
 #include "ModelComponent.h"
 
 void TitleScene::Init()
@@ -19,11 +20,23 @@ void TitleScene::Init()
     TestOJ->SetPosition(DirectX::SimpleMath::Vector3(0.0f, 0.0f, 40.0f));
     TestOJ->SetScale(DirectX::SimpleMath::Vector3(0.3f, 0.3f, 0.3f));
     
-    
     auto model = std::make_shared<ModelComponent>("Asset/Model/Robot/12211_Robot_l2.obj");
     model->SetColor(Color(1, 0, 0, 1));
     TestOJ->AddComponent(model);
-	
+
+    auto motion = std::make_shared<TitlePlayerMotionComponent>();
+    if (motion)
+    {
+        motion->SetDuration(2.0f); // 3•b‚¿‚å‚¢‚Å‰¡Ø‚é
+        motion->SetControlPoints(
+            Vector3(-35.0f, 8.0f, 140.0f),
+            Vector3(-18.0f, 14.0f, 95.0f),
+            Vector3(22.0f, 6.0f, 62.0f),
+            Vector3(45.0f, -2.0f, 15.0f)
+        );
+    }
+    TestOJ->AddComponent(motion);
+
     m_SkyDome = std::make_shared<SkyDome>("Asset/SkyDome/SkyDome_03.png");
 	m_SkyDome->Initialize();
 
