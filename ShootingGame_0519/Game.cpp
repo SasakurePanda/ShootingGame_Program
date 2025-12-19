@@ -3,6 +3,7 @@
 #include "renderer.h"
 #include "SceneManager.h"
 #include "Application.h"
+#include "Sound.h"
 #include "TransitionManager.h"
 #include "DebugUI.h"
 
@@ -21,6 +22,9 @@ void Game::GameInit()
     // デバッグUIの初期化
     DebugUI::Init(Renderer::GetDevice(), Renderer::GetDeviceContext());
 
+    Sound::Init();
+
+    Sound::PlayBgmWav(L"Asset/Sound/bgm.wav", 0.6f);
 }
 
 void Game::GameUninit()
@@ -29,6 +33,8 @@ void Game::GameUninit()
     DebugUI::DisposeUI();
 
     SceneManager::Uninit(); //シーンマネージャーの終了処理
+
+    Sound::Uninit();
 }
 
 void Game::GameUpdate(float deltaTime)
