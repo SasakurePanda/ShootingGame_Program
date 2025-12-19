@@ -1,6 +1,5 @@
 #include "TitlePlayerMotionComponent.h"
 #include "GameObject.h"
-#include <algorithm> 
 #include <iostream>
 
 void TitlePlayerMotionComponent::Initialize()
@@ -10,23 +9,56 @@ void TitlePlayerMotionComponent::Initialize()
 
 void TitlePlayerMotionComponent::Update(float dt)
 {
-	//カメラの前を通り過ぎるイメージ
-	//奥から飛んできてカメラの前を通り過ぎてカメラよりも後ろに飛んでいくイメージ
-	if(dt <= 0.0f){ return; }
-	
-	GameObject* owner = GetOwner();
-	if (!owner){ return; }
+    if (dt <= 0.0f) { return; }
 
-	m_Time += dt;
+    GameObject* owner = GetOwner();
+    if (!owner) { return; }
 
-	float time = m_Time / m_Duration;
-	float t = std::clamp(time , 0.0f , 1.0f);
+    m_Time += dt;
 
-	DirectX::SimpleMath::Vector3 pos = EvaluateBezier(t);
-	owner->SetPosition(pos);
+    float time = m_Time / max(0.01f, m_Duration);
+    float t = std::clamp(time, 0.0f, 1.0f);
 
-	std::cout << "TitlePlayerMotionComponent::Pos" << pos.x << "," << pos.y << "," << pos.z << std::endl;
+    DirectX::SimpleMath::Vector3 pos = EvaluateBezier(t);
+    owner->SetPosition(pos);
+
+    // 進行方向
+    float tNext = std::clamp(t + (1.0f / max(1.0f, m_Duration * 60.0f)), 0.0f, 1.0f);
+    DirectX::SimpleMath::Vector3 posNext = EvaluateBezier(tNext);
+    DirectX::SimpleMath::Vector3 dir = posNext - pos;
+
+    if (dir.LengthSquared() <= 1e-6f)
+    {
+        return;
+    }
+    dir.Normalize();
+
+    float yaw = std::atan2(dir.x, dir.z);
+    float pitch = -std::atan2(dir.y, std::sqrt(dir.x * dir.x + dir.z * dir.z));
+
+    // まずこれを試す（前後反転）
+    yaw -= DirectX::XM_PIDIV2;
+
+    // スムーズ回転
+    float lerpRate = 8.0f;
+    float a = std::min(1.0f, lerpRate * dt);
+
+    DirectX::SimpleMath::Vector3 curRot = owner->GetRotation();
+    DirectX::SimpleMath::Vector3 targetRot(pitch/* + -0.9f*/, yaw, 0.0f);
+    DirectX::SimpleMath::Vector3 newRot = curRot + (targetRot - curRot) * a;
+
+    owner->SetRotation(newRot);
+
+    if (!m_HasTriggered && t >= m_TriggerT)
+    {
+        m_HasTriggered = true;
+        if (m_OnLogoTrigger)
+        {
+            m_OnLogoTrigger();
+        }
+    }
 }
+
 
 void TitlePlayerMotionComponent::SetControlPoints(const DirectX::SimpleMath::Vector3& p0,
 												  const DirectX::SimpleMath::Vector3& p1,
