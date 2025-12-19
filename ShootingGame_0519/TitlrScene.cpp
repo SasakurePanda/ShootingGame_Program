@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm> 
 #include "TitleScene.h"
 #include "Input.h"
 #include "Player.h"
@@ -7,7 +8,6 @@
 #include "TransitionManager.h"
 #include "CameraObject.h"
 #include "FreeCameraComponent.h"
-#include "TitlePlayerMotionComponent.h"
 #include "ModelComponent.h"
 #include "TextureComponent.h"
 
@@ -17,42 +17,46 @@ void TitleScene::Init()
     auto freeCamComp = std::make_shared<FreeCameraComponent>();
 	cameraObj->AddComponent(freeCamComp);
 
-	auto TestOJ = std::make_shared<GameObject>();
-    TestOJ->SetPosition(DirectX::SimpleMath::Vector3(0.0f, 0.0f, 40.0f));
-    TestOJ->SetScale(DirectX::SimpleMath::Vector3(0.3f, 0.3f, 0.3f));
+    m_Player = std::make_shared<GameObject>();
+    m_Player->SetPosition(DirectX::SimpleMath::Vector3(0.0f, 0.0f, 40.0f));
+    m_Player->SetScale(DirectX::SimpleMath::Vector3(1.5f, 1.5f, 1.5f));
+    //TestOJ->SetRotation(Vector3(0.0f, DirectX::XM_PI, 0.0f));
     
-    auto model = std::make_shared<ModelComponent>("Asset/Model/Robot/12211_Robot_l2.obj");
+    auto model = std::make_shared<ModelComponent>("Asset/Model/Player/Fighterjet.obj");
     model->SetColor(Color(1, 0, 0, 1));
-    TestOJ->AddComponent(model);
+    m_Player->AddComponent(model);
 
-    auto TitleLogo = std::make_shared<GameObject>();
+    m_TitleLogo = std::make_shared<GameObject>();
     auto LogoTexter = std::make_shared<TextureComponent>();
     LogoTexter->LoadTexture(L"Asset/UI/TitleLogo01.png");
-    LogoTexter->SetSize(768, 576);
-    LogoTexter->SetScreenPosition(420, 30);
-    TitleLogo->AddComponent(LogoTexter);
+    LogoTexter->SetSize(614.4, 460.8);
+    LogoTexter->SetScreenPosition(360, -30);
+    m_TitleLogo->AddComponent(LogoTexter);
     
 
-    auto TitleText = std::make_shared<GameObject>();
+    m_TitleText = std::make_shared<GameObject>();
     auto TextTexter = std::make_shared<TextureComponent>();
     TextTexter->LoadTexture(L"Asset/UI/TitleText01.png");
-    LogoTexter->SetSize(768, 576);
-    TitleText->AddComponent(TextTexter);
+    TextTexter->SetSize(307.2, 230.4);
+    TextTexter->SetScreenPosition(520, 400);
+    m_TitleText->AddComponent(TextTexter);
 
-    AddTextureObject(TitleLogo);
-    AddTextureObject(TitleText);
+    //AddTextureObject(TitleLogo);
+    //AddTextureObject(TitleText);
 
     auto motion = std::make_shared<TitlePlayerMotionComponent>();
     if (motion)
     {
-        motion->SetDuration(2.0f); 
+        motion->SetDuration(2.7f); 
         motion->SetControlPoints(
-            Vector3(-170.0f, 84.0f,-220.0f),
-            Vector3(-40.0f,  2.0f, -120.0f),
+            Vector3(-166.0f, 90.0f,-220.0f),
+            Vector3(-70.0f,  12.0f, -80.0f),
             Vector3( 10.0f, -6.0f, -3.0f),
             Vector3( 45.0f, -14.0f, 55.0f));
     }
-    TestOJ->AddComponent(motion);
+    m_Player->AddComponent(motion);
+
+    m_TitleMotion = m_Player->GetComponent<TitlePlayerMotionComponent>();
 
     m_SkyDome = std::make_shared<SkyDome>("Asset/SkyDome/SkyDome_03.png");
 	m_SkyDome->Initialize();
@@ -60,7 +64,7 @@ void TitleScene::Init()
 	AddObject(m_SkyDome);
 	AddObject(cameraObj);
     //cameraObj->SetCameraComponent(freeCamComp);
-    AddObject(TestOJ);
+    AddObject(m_Player);
 
     SetSceneObject();
 
@@ -77,13 +81,11 @@ void TitleScene::Init()
         m_SkyDome->SetCamera(freeCamComp.get());
     }
     
-    TestOJ->SetRotation(Vector3(80.0f, 0.0f, 0.0f));
+    //m_Player->SetRotation(Vector3(0.0f, 0.0f, 0.0f));
 }
 
 void TitleScene::Update(float deltatime)
 {
-    //Input::Update();
-
     SetSceneObject();
 
     if (Input::IsKeyDown(VK_SPACE))
@@ -96,7 +98,28 @@ void TitleScene::Update(float deltatime)
     {
         if (obj) obj->Update(deltatime);
         Vector3 pos = obj->GetPosition();
-		//std::cout << "Object Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")\n";
+	}
+
+    for (auto& obj : m_TextureObjects)
+    {
+        if (obj) obj->Update(deltatime);
+        Vector3 pos = obj->GetPosition();
+    }
+
+    if (!m_IsLogoShown && m_TitleMotion)
+    {
+        float safeDuration = max(0.01f, m_TitleMotion->GetDuration());
+        float t = std::clamp(m_TitleMotion->GetTime() / safeDuration, 0.0f, 1.0f);
+
+        if (t >= 0.7f)
+        {
+            m_IsLogoShown = true;
+            AddTextureObject(m_TitleLogo);
+            AddTextureObject(m_TitleText);
+
+            // ’Ç‰Á‚µ‚½‚È‚ç‰Šú‰»‚ª•K—v‚ÈÝŒv‚È‚ç‚±‚±
+            if (m_TitleLogo) { m_TitleLogo->Initialize(); }
+        }
     }
 }
 

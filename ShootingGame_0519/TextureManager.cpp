@@ -1,4 +1,7 @@
 // TextureManager.cpp
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include "TextureManager.h"
 #include <WICTextureLoader.h>
 #include "Renderer.h"

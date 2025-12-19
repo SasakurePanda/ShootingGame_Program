@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include "IScene.h"
 #include "TitleBackGround.h"
+#include "TitlePlayerMotionComponent.h"
 #include "SkyDome.h"
 
 //---------------------------------
@@ -35,6 +36,13 @@ private:
 	std::vector<std::shared_ptr<GameObject>> m_AddObjects;
 	
 	std::shared_ptr<SkyDome> m_SkyDome;
+	std::shared_ptr<GameObject> m_Player;
+
+	std::shared_ptr<GameObject> m_TitleLogo;	//タイトルロゴオブジェクト
+	std::shared_ptr<GameObject> m_TitleText;	//タイトルテキストオブジェクト
+
+	std::shared_ptr<TitlePlayerMotionComponent> m_TitleMotion;
+	bool m_IsLogoShown = false;				//2Dロゴが表示されたかどうか
 };
 
 
