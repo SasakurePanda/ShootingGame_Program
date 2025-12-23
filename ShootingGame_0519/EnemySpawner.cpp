@@ -32,7 +32,7 @@ std::shared_ptr<GameObject> EnemySpawner::SpawnPatrolEnemy(const PatrolConfig& c
 
     //当たり判定の設定を行い、Componentを付ける
     auto col = std::make_shared<OBBColliderComponent>();
-    col->SetSize({ 3,3,3 });
+    col->SetSize({ 4,4,4 });
     enemy->AddComponent(col);
 
     //PatrolEnemyの設定を行い、Componentを付ける
@@ -43,10 +43,12 @@ std::shared_ptr<GameObject> EnemySpawner::SpawnPatrolEnemy(const PatrolConfig& c
     patrol->SetArrivalThreshold(cfg.arrival);
     enemy->AddComponent(patrol);
 
-    auto hp = std::make_shared<HitPointComponent>(4);
+    auto hp = std::make_shared<HitPointComponent>(1);
     hp->SetInvincibilityOnHit(0.0f);
+
     enemy->AddComponent(hp);
     
+	enemy->SetScale({ 4.0f, 4.0f, 4.0f });
 
     m_scene->AddObject(enemy); // シーンに登録する既存関数を使う
 
