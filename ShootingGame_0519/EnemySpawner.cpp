@@ -17,40 +17,62 @@ EnemySpawner::EnemySpawner(GameScene* scene) : m_scene(scene)
     };
 }
 
-std::shared_ptr<GameObject> EnemySpawner::SpawnPatrolEnemy(const PatrolConfig& cfg, const DirectX::SimpleMath::Vector3& pos)
+/// <summary>
+/// 決めた地点を動く敵のスポーン用関数
+/// </summary>
+/// <param name="cfg">敵の設定の入れたコンフィグ</param>
+/// <param name="pos">敵のスポーン位置</param>
+/// <returns></returns>
+std::shared_ptr<GameObject> EnemySpawner::SpawnPatrolEnemy(const PatrolConfig& cfg, 
+                                                           const DirectX::SimpleMath::Vector3& pos)
 {
     //Enemyを生成し、初期設定を行う
     auto enemy = std::make_shared<Enemy>();
     enemy->SetScene(m_scene);
     enemy->SetPosition(pos);
-    //enemy->SetInitialHP(3);
+    enemy->SetScale({ 4.0f, 4.0f, 4.0f });
 
     //モデルの設定を行い、Componentを付ける
     auto model = std::make_shared<ModelComponent>();
-    model->LoadModel("Asset/Model/Enemy/uploads_files_3862208_Cube.obj");
+    model->LoadModel("Asset/Model/Enemy/EnemyFighterjet.obj");
     enemy->AddComponent(model);
 
     //当たり判定の設定を行い、Componentを付ける
     auto col = std::make_shared<OBBColliderComponent>();
-    col->SetSize({ 4,4,4 });
+    col->SetSize({ 4.0f, 2.0f, 4.0f });
     enemy->AddComponent(col);
 
     //PatrolEnemyの設定を行い、Componentを付ける
     auto patrol = std::make_shared<PatrolComponent>();
-    patrol->SetWaypoints(cfg.waypoints);
+    if (!cfg.waypoints.empty())
+    {
+        patrol->SetWaypoints(cfg.waypoints);
+    }
     patrol->SetSpeed(cfg.speed);
-    patrol->SetPingPong(cfg.pingPong);
     patrol->SetArrivalThreshold(cfg.arrival);
+    patrol->SetPingPong(cfg.pingPong);
+
+    //スプライン用の設定追加
+    patrol->SetUseSpline(true);
+    patrol->SetSplineTension(5.0f);
+    patrol->SetLoop(true);
+    patrol->SetFaceMovement(true);
+
+    //コンポーネント追加(敵の動き)
     enemy->AddComponent(patrol);
 
+    //HP設定
     auto hp = std::make_shared<HitPointComponent>(1);
     hp->SetInvincibilityOnHit(0.0f);
 
+    //コンポーネント追加(HP)
     enemy->AddComponent(hp);
-    
-	enemy->SetScale({ 4.0f, 4.0f, 4.0f });
+   
+    //初期化
+    enemy->Initialize();
 
-    m_scene->AddObject(enemy); // シーンに登録する既存関数を使う
+    //シーンに登録
+    m_scene->AddObject(enemy); 
 
     return enemy;
 }
@@ -66,7 +88,7 @@ std::shared_ptr<GameObject> EnemySpawner::SpawnCircleEnemy(const CircleConfig& c
 
     //モデルの設定を行い、Componentを付ける
     auto model = std::make_shared<ModelComponent>();
-    model->LoadModel("Asset/Model/Enemy/uploads_files_3862208_Cube.obj");
+    model->LoadModel("Asset/Model/Enemy/EnemyFighterjet.obj");
     enemy->AddComponent(model);
 
     //当たり判定の設定を行い、Componentを付ける
@@ -97,7 +119,7 @@ std::shared_ptr<GameObject> EnemySpawner::SpawnTurretEnemy(const TurretConfig& c
 
     //モデルの設定を行い、Componentを付ける
     auto model = std::make_shared<ModelComponent>();
-    model->LoadModel("Asset/Model/Enemy/uploads_files_3862208_Cube.obj");
+    model->LoadModel("Asset/Model/Enemy/EnemyFighterjet.obj");
     enemy->AddComponent(model);
 
     //当たり判定の設定を行い、Componentを付ける
@@ -132,7 +154,7 @@ std::shared_ptr<GameObject> EnemySpawner::SpawnFleeEnemy(const FleeConfig& cfg,
 
     //モデル
     auto model = std::make_shared<ModelComponent>();
-    model->LoadModel("Asset/Model/Enemy/uploads_files_3862208_Cube.obj");
+    model->LoadModel("Asset/Model/Enemy/EnemyFighterjet.obj");
     enemy->AddComponent(model);
 
     //コライダー
@@ -268,7 +290,7 @@ void EnemySpawner::EnsureTurretCount()
             int slot = baseIndex + i;
 
             //サイクルしてウェイポイントセットを選ぶ
-            const auto& selectedPos = TurretPosSets[slot % patrolWaypointSets.size()];
+            const auto& selectedPos = TurretPosSets[slot % TurretPosSets.size()];
 
             TurretConfig localCfg = turretCfg;           //コピーして編集
             localCfg.pos = selectedPos;      //この敵用にウェイポイントをセット

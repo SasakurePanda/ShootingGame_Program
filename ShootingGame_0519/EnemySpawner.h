@@ -11,7 +11,7 @@ class EnemyAIComponent;
 struct PatrolConfig
 {
 	int spawnCount = 4;
-	float speed    = 25.0f;
+	float speed    = 45.0f;
 	float arrival = 0.5f;
 	bool pingPong = true;
 	std::vector<DirectX::SimpleMath::Vector3> waypoints;

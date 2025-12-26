@@ -11,7 +11,7 @@ void Enemy::Initialize()
 void Enemy::Update(float dt)
 {
     auto hp = GetComponent<HitPointComponent>();
-    std::cout << "敵のHP：" << hp->GetHP() << std::endl;
+    //std::cout << "敵のHP：" << hp->GetHP() << std::endl;
 
     //コンポーネント等のUpdate
     GameObject::Update(dt);
