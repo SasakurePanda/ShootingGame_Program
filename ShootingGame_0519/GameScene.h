@@ -18,6 +18,7 @@
 #include "BuildingSpawner.h"
 #include "PlayAreaComponent.h"
 #include "MoveComponent.h"
+#include "MiniMapComponent.h"
 
 //---------------------------------
 //ISceneを継承したGameScene
@@ -169,4 +170,15 @@ private:
 	std::shared_ptr<PlayAreaComponent> m_playArea;
 
 	std::shared_ptr<MoveComponent> m_playerMove;
+	
+	//--------------ミニマップ関連--------------
+	//--------------ミニマップ関連------------------
+	std::shared_ptr<GameObject> m_miniMapUi;
+	MiniMapComponent* m_miniMap = nullptr;
+
+	ID3D11ShaderResourceView* m_miniMapBgSRV = nullptr;
+	ID3D11ShaderResourceView* m_miniMapPlayerSRV = nullptr;
+	ID3D11ShaderResourceView* m_miniMapEnemySRV = nullptr;
+	ID3D11ShaderResourceView* m_miniMapBuildingSRV = nullptr;
+
 };

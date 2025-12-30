@@ -18,7 +18,7 @@
 
 void GameScene::DebugCollisionMode()
 {
-    static int selected = 0;
+    static int selected = 1;
 
     ImGui::Begin("Collision Debug Mode Select");
 
@@ -131,25 +131,11 @@ bool GameScene::Raycast(const DirectX::SimpleMath::Vector3& origin,
             }
         }
 
-        // Candidate check: prefer using collider components (AABB/sphere) if present
-        // Example: if GameObject has a method GetBoundingRadius use sphere test,
-        // otherwise if AABBColliderComponent exists use AABB raycast, etc.
-        // Here we show a fallback using sphere: if object provides GetBoundingRadius().
         float t;
         float radius = 0.0f;
 
-        // try dynamic_cast to a component that gives us a bounding radius (example)
-        // if your GameObject has GetBoundingRadius method, call it instead.
         bool hasSphere = false;
-        // Example pseudo-check: if (obj->HasComponent<SphereCollider>()) ...
-        // For now, try to call a method if exists (adjust to your codebase)
-        // ----
-        // Fallback: if object exposes a method GetBoundingRadius() - adapt as needed:
-        // float r = obj->GetBoundingRadius(); // uncomment if exists
-        // hasSphere = (r > 0.0f);
-        // radius = r;
 
-        // If you have Enemy::GetBoundingRadius we can still use it:
         {
             Enemy* e = dynamic_cast<Enemy*>(obj.get());
             if (e)
@@ -172,10 +158,7 @@ bool GameScene::Raycast(const DirectX::SimpleMath::Vector3& origin,
         }
         else
         {
-            // Optionally, test AABB if your GameObject has AABB component
-            // AABBColliderComponent* aabb = obj->GetComponent<AABBColliderComponent>();
-            // if (aabb) { if (RayAABBIntersect(...)) { ... } }
-            // For brevity, skip if no collider info
+
         }
     }
 
@@ -216,12 +199,12 @@ bool GameScene::RaycastForAI(const DirectX::SimpleMath::Vector3& origin,
         if (!obj) continue;
         if (obj.get() == ignore) continue;
 
-        // ★ コライダーを持っていないなら無視
+        //コライダーを持っていないなら無視
         auto obb = obj->GetComponent<OBBColliderComponent>();
         auto aabb = obj->GetComponent<AABBColliderComponent>();
         bool hasCollider = (obb || aabb);
 
-        // Enemy の簡易球 or Building の AABB など…
+        //Enemy の簡易球 or Building の AABB など…
         float radius = 0.0f;
         bool hasSphere = false;
 
@@ -232,8 +215,8 @@ bool GameScene::RaycastForAI(const DirectX::SimpleMath::Vector3& origin,
         }
         else if (hasCollider)
         {
-            // ★ コライダーからざっくり半径を作る（対角長の半分）
-            //    きっちりした Ray vs OBB/AABB は後で実装でもOK
+            //コライダーからざっくり半径を作る（対角長の半分）
+            //きっちりした Ray vs OBB/AABB は後で実装でもOK
             Vector3 center = obj->GetPosition();
             Vector3 extents;
 
@@ -297,71 +280,53 @@ void GameScene::Init()
     //--------------------------プレイヤー作成---------------------------------
     m_playArea = std::make_shared<PlayAreaComponent>();
     m_playArea->SetScene(this); // PlayArea がシーンを利用する場合
-    m_playArea->SetBounds({ -150.0f, -1.0f, -150.0f }, { 150.0f, 150.0f, 150.0f });
+    m_playArea->SetBounds({ -300.0f, -1.0f, -300.0f }, { 300.0f, 200.0f, 300.0f });
     m_playArea->SetGroundY(-7.0f);
     
     m_FollowCamera = std::make_shared<CameraObject>();
+
+    auto followCamComp = m_FollowCamera->AddCameraComponent<FollowCameraComponent>();
+
+    AddObject(m_FollowCamera);
+
     m_FollowCamera->Initialize();
 
     m_player = std::make_shared<Player>();
-    m_player->SetPosition({ 0.0f, 0.0f, 125.0f });
-    m_player->SetRotation({ 80.0,0.0,0.0 });
-    m_player->SetScale({ 0.3f, 0.3f, 0.3f });
     m_player->Initialize();
 
     auto moveComp = m_player->GetComponent<MoveComponent>();
 
     if (moveComp)
     {
-        // PlayArea を渡す（PlayArea は shared_ptr でシーンが保持している）
         moveComp->SetPlayArea(m_playArea.get());
-
-        // obstacleTester を PlayArea の RaycastObstacle に接続
-        //moveComp->SetObstacleTester([this](const DirectX::SimpleMath::Vector3& start,
-        //    const DirectX::SimpleMath::Vector3& dir,
-        //    float len,
-        //    DirectX::SimpleMath::Vector3& outNormal,
-        //    float& outDist) -> bool
-        //    {
-        //        if (!m_playArea) { return false; }
-        //        return m_playArea->RaycastObstacle(start, dir, len, outNormal, outDist, /*ignore*/ nullptr);
-        //    });
     }
 
     //-------------------------敵生成--------------------------------
     m_enemySpawner = std::make_unique<EnemySpawner>(this);
     m_enemySpawner->patrolCfg.spawnCount = 2;
+	m_enemySpawner->circleCfg.spawnCount = 0;
+    m_enemySpawner->turretCfg.spawnCount = 0;
+    m_enemySpawner->fleeCfg.spawnCount = 0;
 
     enemyCount = m_enemySpawner->patrolCfg.spawnCount + m_enemySpawner->circleCfg.spawnCount + m_enemySpawner->turretCfg.spawnCount;
 
-    m_enemySpawner->SetWaypoints({
-        {   0.0f, 20.0f,  0.0f },
-        {   0.0f, 20.0f,  0.0f },
-        {   0.0f, 20.0f,  0.0f },
-        {   0.0f, 20.0f,  0.0f }});
-    m_enemySpawner->SetWaypoints({
-        {   0.0f, 20.0f,  0.0f },
-        { -60.0f, 20.0f,  0.0f },
-        { -60.0f, 20.0f,-60.0f },
-        {   0.0f, 20.0f,-60.0f }});
-    m_enemySpawner->SetWaypoints({
-        {   0.0f,  0.0f,   0.0f },
-        { 120.0f,  0.0f,   0.0f },
-        { 120.0f,  0.0f, 120.0f },
-        {   0.0f,  0.0f, 120.0f }});
+    m_enemySpawner->SetWaypoints(
+        { { 80.0f, 20.0f,  0.0f }, 
+          { 40.0f, 20.0f,-80.0f }, 
+          {-40.0f, 20.0f,-80.0f }, 
+          {-80.0f, 20.0f,  0.0f }, 
+          { 40.0f, 20.0f, 80.0f },});
+
+    m_enemySpawner->SetWaypoints(
+        { { 125.0f, 90.0f,    0.0f },
+          {  62.5f, 90.0f, -125.0f },
+          { -62.5f, 90.0f,  125.0f },
+          { -62.5f, 90.0f, -125.0f },
+          {  62.5f, 90.0f,  125.0f },
+          {-125.0f, 90.0f,  -62.5f },
+          {-125.0f, 90.0f,   62.5f }});
 
     m_enemySpawner->EnsurePatrolCount();
-
-    m_enemySpawner->fleeCfg.spawnCount = 1;
-    m_enemySpawner->fleeCfg.maxSpeed = 48.0f;
-    m_enemySpawner->fleeCfg.maxForce = 50.0f;
-    m_enemySpawner->fleeCfg.fleeStrength = 1.0f;
-    m_enemySpawner->fleeCfg.lookahead = 20.0f;
-    m_enemySpawner->fleeCfg.feelerCount = 9;
-    m_enemySpawner->fleeCfg.feelerSpread = DirectX::XM_PI / 4.0f;
-    m_enemySpawner->fleeCfg.player = m_player;
-
-    //m_enemySpawner->EnsureFleeCount();
     //------------------スカイドーム作成-------------------------
 
     m_SkyDome = std::make_shared<SkyDome>("Asset/SkyDome/SkyDome_03.png");
@@ -409,14 +374,10 @@ void GameScene::Init()
         {  62.5f, -12.0f,  125.0f },
         {-125.0f, -12.0f,  -62.5f },
         {-125.0f, -12.0f,   62.5f },
-        {   0.0f,   0.0f,    0.0f },
+        {   0.0f, -12.0f,    0.0f },
     };
 
-
     int placed = m_buildingSpawner->Spawn(bc);
-
-    /*bc.modelPath = "Asset/Build/Rock1.obj";
-    m_buildingSpawner->Spawn(bc);*/
 
     //-------------------------レティクル作成-------------------------------------
     m_reticle = std::make_shared<Reticle>(L"Asset/UI/26692699.png", m_reticleW);
@@ -430,10 +391,6 @@ void GameScene::Init()
 	auto hpUI = std::make_shared<HPBar>(L"Asset/UI/HPBar01.png", L"Asset/UI/HPGauge01.png", 100.0f, 475.0f);
 	hpUI->SetScreenPos(30.0f, 200.0f);
     hpUI->Initialize();
-
-    //------------------------------追尾カメラ作成---------------------------------
-    m_FollowCamera = std::make_shared<CameraObject>();
-    m_FollowCamera->Initialize();
     
     auto shootComp = m_player->GetComponent<ShootingComponent>();
     //ShootingComponent に this（現在のシーン）を渡す
@@ -503,21 +460,46 @@ void GameScene::Init()
 
     cameraComp->SetDistance(15.0f);
 
+    //-------------ミニマップ設定----------------
+	m_miniMapBgSRV       = TextureManager::Load("Asset/UI/minimap_Background.png");
+    m_miniMapPlayerSRV   = TextureManager::Load("Asset/UI/mimimap_player.png");
+    m_miniMapEnemySRV    = TextureManager::Load("Asset/UI/mimimap_enemy.png");
+    m_miniMapBuildingSRV = TextureManager::Load("Asset/UI/mimimap_building.png");
+
+    m_miniMapUi = std::make_shared<GameObject>();
+    m_miniMap = m_miniMapUi->AddComponent<MiniMapComponent>().get();
+
+    m_miniMap->SetScreenPosition(1008.0f, 16.0f);
+    m_miniMap->SetSize(256.0f, 256.0f);
+    m_miniMap->SetCoverageRadius(200.0f);
+    m_miniMap->SetRotateWithPlayer(true);
+    m_miniMap->SetIconSize(10.0f);
+
+    m_miniMap->SetBackgroundSRV(m_miniMapBgSRV);
+	m_miniMap->SetPlayerIconSRV(m_miniMapPlayerSRV);
+    m_miniMap->SetEnemyIconSRV(m_miniMapEnemySRV);
+    m_miniMap->SetBuildingIconSRV(m_miniMapBuildingSRV);
+
+    m_miniMap->SetPlayer(m_player.get()); // m_playerがshared_ptr<GameObject>想定
+
+    //---------------------------------------------
+	
     m_GameObjects.insert(m_GameObjects.begin(), m_SkyDome);
 
-    m_FollowCamera->GetCameraComponent()->SetTarget(m_player.get());
+    m_FollowCamera->GetFollowCameraComponent()->SetTarget(m_player.get());
 
     //AddTextureObject(HPbar);
     AddTextureObject(m_reticle);
     AddTextureObject(hpUI);
+    AddTextureObject(m_miniMapUi);
 
     AddObject(m_player);
     AddObject(m_FollowCamera);
 
-    if (m_FollowCamera && m_FollowCamera->GetCameraComponent())
+    if (m_FollowCamera && m_FollowCamera->GetFollowCameraComponent())
     {
         Vector2 screenPos(static_cast<float>(m_lastDragPos.x), static_cast<float>(m_lastDragPos.y));
-        m_FollowCamera->GetCameraComponent()->SetReticleScreenPos(screenPos);
+        m_FollowCamera->GetFollowCameraComponent()->SetReticleScreenPos(screenPos);
     }
 
     // 例: Renderer::Init() の後
@@ -598,7 +580,7 @@ void GameScene::Update(float deltatime)
     //カメラにレティクル座標を渡す（最新のものを渡す）
     if (m_FollowCamera && m_FollowCamera->GetCameraComponent())
     {
-        m_FollowCamera->GetCameraComponent()->SetReticleScreenPos(Vector2((float)m_lastDragPos.x, (float)m_lastDragPos.y));
+        m_FollowCamera->GetFollowCameraComponent()->SetReticleScreenPos(Vector2((float)m_lastDragPos.x, (float)m_lastDragPos.y));
     }
 
     //----------------------------------------------
@@ -646,6 +628,44 @@ void GameScene::Update(float deltatime)
     if (m_playerMove)
     {
         m_playerMove->ApplyCollisionPush();
+    }
+
+    if (m_miniMap)
+    {
+        std::vector<GameObject*> enemies;
+        std::vector<GameObject*> buildings;
+
+        for (std::shared_ptr<GameObject> obj : m_GameObjects)
+        {
+            if (!obj)
+            {
+                continue;
+            }
+
+            if (auto enemy = std::dynamic_pointer_cast<Enemy>(obj))
+            { 
+                enemies.push_back(obj.get());
+            }
+            else if (auto building = std::dynamic_pointer_cast<Building>(obj))
+            { 
+                buildings.push_back(obj.get());
+            }
+        }
+
+        m_miniMap->SetEnemies(enemies);
+        m_miniMap->SetBuildings(buildings);
+    }
+
+
+	auto hp = m_player->GetComponent<HitPointComponent>();
+	if (enemyCount <= 0)
+    {
+        SceneManager::SetCurrentScene("ResultScene");
+    }
+	
+    if (hp->GetHP() <= 0)
+    {
+        SceneManager::SetCurrentScene("ResultScene02");
     }
 
 }
