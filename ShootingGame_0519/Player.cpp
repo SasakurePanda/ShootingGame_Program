@@ -8,6 +8,7 @@
 #include "HitPointCompornent.h"
 #include "BulletComponent.h"
 #include "Collision.h" 
+#include "Enemy.h"
 #include <iostream>
 
 void Player::Initialize()
@@ -18,7 +19,7 @@ void Player::Initialize()
     //モデルコンポーネントの生成
     auto modelComp = std::make_shared<ModelComponent>();
     //モデルの読み込み
-    modelComp->LoadModel("Asset/Model/Robot/12211_Robot_l2.obj");
+    modelComp->LoadModel("Asset/Model/Player/Fighterjet.obj");
     modelComp->SetColor(Color(1, 0, 0, 1));
 
     //移動コンポーネントの生成
@@ -31,7 +32,7 @@ void Player::Initialize()
 
     //コライダーコンポーネントの生成
     m_Collider = std::make_shared<OBBColliderComponent>();
-    m_Collider -> SetSize({ 12.0f, 10.0f, 30.0f }); // モデルに合わせて調整
+    m_Collider -> SetSize({ 6.0f, 1.5f, 8.0f }); // モデルに合わせて調整
     //m_Collider -> SetLocalOffset(Vector3(0.0f,0.0f ,15.0f));
     m_Collider ->isStatic = false;
 
@@ -42,11 +43,13 @@ void Player::Initialize()
     AddComponent(HPComp);
     AddComponent(m_Collider);
   //----------------------------------------------
-
+    
+    SetPosition({ 0.0f, 0.0f, 125.0f });
+    SetRotation({ 0.0,60.0,0.0 });
+    SetScale({ 1.0f, 1.0f, 1.0f });
     GameObject::Initialize();
 
-     //初期回転(ラジアンでの設定)
-    SetRotation(DirectX::SimpleMath::Vector3(0.0f, 0.0f, 0.0f));
+    
 }
 
 void Player::Update(float dt)
@@ -59,7 +62,7 @@ void Player::OnCollision(GameObject* other)
 {
     if (!other) { return; }
 
-    //弾衝突判定
+    //--------弾の判定処理-----------
     if (auto bc = other->GetComponent<BulletComponent>())
     {
         if (bc->GetBulletType() == BulletComponent::BulletType::ENEMY)
@@ -95,12 +98,9 @@ void Player::OnCollision(GameObject* other)
         }
     }
 
-    //建物衝突処理
+    //--------建物衝突処理--------
     if (auto b = dynamic_cast<Building*>(other))
     {
-        //まずめり込みを押し出しで解消
-        //ResolvePenetrationWith(other);
-
         //HitPointComponentにダメージを与える
         auto hp = GetComponent<HitPointComponent>();
 
@@ -112,6 +112,73 @@ void Player::OnCollision(GameObject* other)
             di.tag = "collision_building";
             hp->ApplyDamage(di);
         }
+        return;
+    }
+
+    //--------敵衝突処理--------
+    if (auto b = dynamic_cast<Enemy*>(other))
+    {
+        auto hp = GetComponent<HitPointComponent>();
+        if (hp)
+        {
+            DamageInfo di;
+            di.amount = 4;
+            di.instigator = other;
+            di.tag = "collision_enemy";
+            bool applied = hp->ApplyDamage(di);
+            if (applied)
+            {
+                // 水平面での方向ベクトル（player <- other）
+                DirectX::SimpleMath::Vector3 dir = GetPosition() - other->GetPosition();
+                dir.y = 0.0f;
+                if (dir.LengthSquared() < 1e-6f)
+                {
+                    // 位置がほぼ被っている場合はランダムに左右を選ぶ
+                    int r = std::rand() % 2;
+                    if (r == 0) 
+                    { 
+                        dir = DirectX::SimpleMath::Vector3(1.0f, 0.0f, 0.0f);
+                    }
+                    else
+                    { 
+                        dir = DirectX::SimpleMath::Vector3(-1.0f, 0.0f, 0.0f);
+                    }
+                }
+                dir.Normalize();
+
+                // dir に直交する水平の左方向ベクトルを作る（-z,0,x を利用）
+                DirectX::SimpleMath::Vector3 lateral = DirectX::SimpleMath::Vector3(-dir.z, 0.0f, dir.x);
+                lateral.Normalize();
+
+                // 少しだけ左右に弾く。符号はランダムor衝突の位置差で決める（ここはランダム）
+                float sign = (std::rand() % 2 == 0) ? 1.0f : -1.0f;
+
+                // インパルスの大きさ（チューニング）
+                const float impulseStrength = 3.0f; // とても小さい: 調整可
+                DirectX::SimpleMath::Vector3 impulse = lateral * sign * impulseStrength;
+
+                // MoveComponent にインパルスを与える
+                auto mv = GetComponent<MoveComponent>();
+                if (mv)
+                {
+                    mv->AddImpulse(impulse);
+                }
+                else
+                {
+                    // 万が一 MoveComponent が無ければ位置をわずかに移動（フォールバック）
+                    DirectX::SimpleMath::Vector3 pos = GetPosition();
+                    pos += impulse * 0.05f;
+                    SetPosition(pos);
+                }
+
+                // 見栄え用（ヒットストップ等）を入れるならここで呼ぶ
+                if (auto s = GetScene())
+                {
+                    // s->ApplyHitStop(0.05f); // 実装があれば呼ぶ
+                }
+            }
+        }
+
         return;
     }
 }

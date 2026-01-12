@@ -28,6 +28,27 @@ static float NormalizeAngleDelta(float a)
     return a;
 }
 
+static float ApplyDeadZoneAndCurve(float delta, float deadZone, float softZone)
+{
+    float sign = (delta >= 0.0f) ? 1.0f : -1.0f;
+    float mag = std::fabs(delta);
+
+    if (mag <= deadZone)
+    {
+        return 0.0f;
+    }
+
+    float denom = max(softZone - deadZone, 1e-6f);
+    float t = (mag - deadZone) / denom;
+    t = std::clamp(t, 0.0f, 1.0f);
+
+    float curve = t * t;
+    float curvedMag = mag * curve;
+
+    return sign * curvedMag;
+}
+
+
 void MoveComponent::Initialize()
 {
     if (GetOwner())
@@ -48,6 +69,23 @@ void MoveComponent::Uninit()
 
 }
 
+float MoveComponent::GetBoostIntensity() const
+{
+    if (m_isBoosting)
+    {
+        float t = m_boostTimer / m_boostSeconds;
+        return std::clamp(t, 0.0f, 1.0f);
+    }
+    else if (m_recoverTimer >= 0.0f)
+    {
+        float t = 1.0f - std::clamp(m_recoverTimer / m_boostRecover, 0.0f, 1.0f);
+        return t;
+    }
+    else
+    {
+        return 0.0f;
+    }
+}
 
 void MoveComponent::Update(float dt)
 {
@@ -234,56 +272,18 @@ void MoveComponent::Update(float dt)
     //------------------------目標ヨー/ピッチを計算-----------------------
     //XZ平面上で前方向(z軸)にどれだけ回っているか(左右)
     float targetYaw = std::atan2(desired.x, desired.z);
-
-    //
     float horiz = std::sqrt(desired.x * desired.x + desired.z * desired.z);
-
-    //Y軸と水平成分の長さで水平面(XZ)に対してどれくらい上を向いているか
     float targetPitch = std::atan2(desired.y, horiz);
 
-    //目標のヨー角と現在のヨー角を比べて-180～+180の範囲に収める
     float deltaYaw = NormalizeAngleDelta(targetYaw - currentYaw);
-
-    //目標のピッチ角と現在のピッチ角を比べて-180～+180の範囲に収める
     float deltaPitch = NormalizeAngleDelta(targetPitch - currentPitch);
 
-    //================= 4.5 小さな入力にはあまり反応しない「デッドゾーン＋カーブ」 =================
-    auto ApplyDeadZoneAndCurve = [](float delta,
-        float deadZone,   // ここまではほぼ動かない
-        float softZone)   // ここから先は普通に動く
-        {
-            float sign = (delta >= 0.0f) ? 1.0f : -1.0f;
-            float mag = std::fabs(delta);
-
-            // 1) デッドゾーン：この範囲内なら完全に 0 扱い
-            if (mag <= deadZone)
-            {
-                return 0.0f;
-            }
-
-            // 2) deadZone ～ softZone の間は「少しだけ効く」
-            //    softZone を超えたらフルの効き
-            float t = (mag - deadZone) / max(softZone - deadZone, 1e-6f);
-            t = std::clamp(t, 0.0f, 1.0f);
-
-            // 3) t に対してカーブをかける
-            //    t       : ほぼ線形
-            //    t * t   : 小さいとき弱く、大きいとき強く（おすすめ）
-            //    t * t * t: さらに寝かせたいとき
-            float curve = t * t;
-
-            float curvedMag = mag * curve;
-
-            return sign * curvedMag;
-        };
-
-    // ※ 数値はお好みで。とりあえずの例（XMConvertToRadians を使うので <DirectXMath.h> が必要）
-    const float yawDeadZone   = DirectX::XMConvertToRadians(3.0f);   // 3度まではほぼ反応しない
-    const float yawSoftZone   = DirectX::XMConvertToRadians(13.0f);  // 20度でフル感度
-    const float pitchDeadZone = DirectX::XMConvertToRadians(2.0f);   // ピッチは少し敏感に
+    const float yawDeadZone = DirectX::XMConvertToRadians(3.0f);
+    const float yawSoftZone = DirectX::XMConvertToRadians(13.0f);
+    const float pitchDeadZone = DirectX::XMConvertToRadians(2.0f);
     const float pitchSoftZone = DirectX::XMConvertToRadians(15.0f);
 
-    deltaYaw = ApplyDeadZoneAndCurve(deltaYaw, yawDeadZone, yawSoftZone);
+    deltaYaw   = ApplyDeadZoneAndCurve(deltaYaw, yawDeadZone, yawSoftZone);
     deltaPitch = ApplyDeadZoneAndCurve(deltaPitch, pitchDeadZone, pitchSoftZone);
 
     //------------------ヨー/ピッチをスムーズに追従させる------------------
@@ -412,7 +412,21 @@ void MoveComponent::Update(float dt)
 
     owner->SetPosition(pos);
 
+    if (m_externalVelocity.LengthSquared() > 1e-8f)
+    {
+        float decay = std::exp(-m_externalDamping * dt);
+        m_externalVelocity *= decay;
+
+        // 微小な値はクリアしておく
+        if (m_externalVelocity.LengthSquared() < 1e-6f)
+        {
+            m_externalVelocity = DirectX::SimpleMath::Vector3::Zero;
+        }
+    }
+
     m_currentPitch = currentPitch;
+
+
 }
 void MoveComponent::HandleCollisionCorrection(
     const DirectX::SimpleMath::Vector3& push,
@@ -424,10 +438,7 @@ void MoveComponent::HandleCollisionCorrection(
     if (!owner) { return; }
 
     // 押し出しがほぼゼロなら無視
-    if (push.LengthSquared() < 1e-8f)
-    {
-        return;
-    }
+    if (push.LengthSquared() < 1e-8f){ return; }
 
     // --- 押し出し方向ベクトル（法線）を決める ---
     Vector3 n;
@@ -494,4 +505,22 @@ void MoveComponent::ApplyCollisionPush()
     // 次フレームに持ち越さない
     m_totalPushThisFrame = Vector3::Zero;
     m_hasPushThisFrame = false;
+}
+
+void MoveComponent::RequestBoost()
+{
+    if (m_isBoosting || m_cooldownTimer > 0.0f)
+    {
+        return;
+    }
+
+    m_isBoosting = true;
+    m_boostTimer = 0.0f;
+    m_recoverTimer = -1.0f;
+    m_cooldownTimer = m_boostCooldown;
+
+    if (m_camera)
+    {
+        m_camera->SetBoostState(true);
+    }
 }
