@@ -76,34 +76,51 @@ void HomingComponent::Update(float dt)
         IScene* s = owner->GetScene();
         if (s)
         {
-            s->RemoveObject(owner); 
+            s->RemoveObject(owner);
         }
         return;
     }
 
+    // BulletComponent を取得
     auto bc_sp = owner->GetComponent<BulletComponent>();
     if (!bc_sp) { return; }
 
+    // ターゲット確認
     auto targetSp = m_target.lock();
     if (!targetSp) { return; }
 
     // 現在の位置・速度ベクトル（ワールド単位）
-    Vector3 pos = owner->GetPosition(); //現在の位置
-    Vector3 dir = bc_sp->GetVelocity(); //方向ベクトル
-    float speed = bc_sp->GetSpeed();    //弾のスピード
-    Vector3 vel = dir * speed;          //速度ベクトル
+    Vector3 pos = owner->GetPosition(); // 現在位置
+    Vector3 dir = bc_sp->GetVelocity(); // 方向ベクトル（期待は単位ベクトル）
+    float speed = bc_sp->GetSpeed();    // スカラー速度
+    Vector3 vel = dir * speed;          // 速度ベクトル
 
+    // フォールバックで dir がゼロに近いときは正規化可能な値を作る
+    if (dir.LengthSquared() < 1e-6f)
+    {
+        dir = Vector3::UnitZ;
+    }
+    else
+    {
+        dir.Normalize();
+    }
+
+    // ターゲットの位置と速度推定
     Vector3 targetPos = targetSp->GetPosition();
-	Vector3 targetVel = Vector3::Zero;
-
+    Vector3 targetVel = Vector3::Zero;
     if (m_havePrevTargetPos)
     {
-        //今のターゲット位置 - 前のターゲット位置 / dt で速度を計算
-        targetVel = (targetPos - m_prevTargetPos) / dt;
+        // 今のターゲット位置 - 前のターゲット位置 / dt で速度を計算
+        // dt が 0 に近い場合はガードする
+        if (dt > 1e-6f)
+        {
+            targetVel = (targetPos - m_prevTargetPos) / dt;
+        }
     }
     m_prevTargetPos = targetPos;
     m_havePrevTargetPos = true;
 
+    // intercept time を計算（解析解）
     Vector3 rel = targetPos - pos;
     float tIntercept = 0.0f;
     bool haveT = SolveInterceptTime(rel, targetVel, speed, tIntercept);
@@ -122,26 +139,50 @@ void HomingComponent::Update(float dt)
         }
     }
 
+    // 迎撃点（将来の目標位置）
     Vector3 interceptPos = targetPos + targetVel * t;
 
+    // ---------- desiredVec（迎撃方向）計算 ----------
     Vector3 desiredVec = interceptPos - pos;
     if (desiredVec.LengthSquared() < 1e-6f)
     {
         // ほとんどその場にいるなら現在の向きを維持
         desiredVec = dir;
     }
+
+    // ---------- ここで発射時のランダムバイアスを適用 ----------
+    // m_aimBias : 単位ベクトル想定（発射側から渡される）
+    // m_aimBiasStrength : スカラー（0.0 = 無効, 0..1 = 比率的強さ）
+    if (m_aimBiasStrength > 0.0f)
+    {
+        // 方法A: 単純加算して正規化（見た目が分かりやすい）
+        desiredVec = desiredVec + (m_aimBias * m_aimBiasStrength);
+
+        // バイアス強さを時間で減衰させる
+        m_aimBiasStrength -= m_aimBiasDecay * dt;
+        if (m_aimBiasStrength < 0.0f)
+        {
+            m_aimBiasStrength = 0.0f;
+        }
+    }
+
+    // 正規化（以降は方向ベクトルとして使う）
+    if (desiredVec.LengthSquared() < 1e-6f)
+    {
+        desiredVec = dir;
+    }
     desiredVec.Normalize();
 
-    // 1 秒あたり最大旋回角度（度）をフレーム毎にラジアンに
+    // ---------- 角度制限（1フレームあたりの回転上限） ----------
     const float DEG2RAD = 3.14159265358979323846f / 180.0f;
     float maxTurnDeg = m_maxTurnRateDeg;
     if (maxTurnDeg <= 0.0f)
     {
-        maxTurnDeg = 60.0f;
+        maxTurnDeg = 60.0f; // デフォルト
     }
     float maxTurnRad = maxTurnDeg * dt * DEG2RAD;
 
-    // 現在方向 dir と desiredVec の角度を求める
+    // 現在方向 dir と desiredVec の角度を求める（数値安全に clamp）
     float dot = dir.Dot(desiredVec);
     if (dot > 1.0f) { dot = 1.0f; }
     if (dot < -1.0f) { dot = -1.0f; }
@@ -150,7 +191,7 @@ void HomingComponent::Update(float dt)
     Vector3 newDir;
     if (theta <= maxTurnRad)
     {
-        // 今フレームで到達可能なら直接 desiredDir を使う
+        // 今フレーム内で到達可能なら直接 desiredVec を使う
         newDir = desiredVec;
     }
     else
@@ -160,8 +201,7 @@ void HomingComponent::Update(float dt)
         float axisLen2 = axis.LengthSquared();
         if (axisLen2 < 1e-12f)
         {
-            // ほぼ同一直線上 or 逆向き（回転軸が定義できない）
-            // 単純に線形補間で少しだけ寄せる（安定化）
+            // ほぼ同一直線上 or 逆向き。線形補間で少しだけ寄せる
             float alpha = maxTurnRad / (theta + 1e-6f);
             Vector3 tmp = dir + (desiredVec - dir) * alpha;
             if (tmp.LengthSquared() < 1e-6f)
@@ -195,9 +235,6 @@ void HomingComponent::Update(float dt)
     // 速度の大きさは基本維持（必要ならここで穏やかに補正）
     float newSpeed = speed;
 
-    // さらに過度な速度変化を避けたいならここで clamp しても良い
-    // 例: newSpeed = std::max(newSpeed, minAllowedSpeed);
-
     // 最低速度保証
     float minSpeed = 1e-3f;
     if (newSpeed < minSpeed)
@@ -205,15 +242,8 @@ void HomingComponent::Update(float dt)
         newSpeed = minSpeed;
     }
 
-    // 書き戻し
+    // 書き戻し（BulletComponent 側で位置更新を行う前提）
     bc_sp->SetVelocity(newDir);
     bc_sp->SetSpeed(newSpeed);
-
-    std::cout << "[HOMING DEBUG] pos=" << pos.x << "," << pos.y << "," << pos.z
-        << " target=" << targetPos.x << "," << targetPos.y << "," << targetPos.z
-        << " dir=" << dir.x << "," << dir.y << "," << dir.z
-        << " desired=(" << desiredVec.x << "," << desiredVec.y << "," << desiredVec.z << ")"
-        << " theta=" << theta
-        << " maxTurnRad=" << maxTurnRad
-        << " newDir=" << newDir.x << "," << newDir.y << "," << newDir.z << std::endl;
 }
+

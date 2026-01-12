@@ -303,9 +303,9 @@ void GameScene::Init()
 
     //-------------------------敵生成--------------------------------
     m_enemySpawner = std::make_unique<EnemySpawner>(this);
-    m_enemySpawner->patrolCfg.spawnCount = 3;
+    m_enemySpawner->patrolCfg.spawnCount = 4;
 	m_enemySpawner->circleCfg.spawnCount = 0;
-    m_enemySpawner->turretCfg.spawnCount = 0;
+    m_enemySpawner->turretCfg.spawnCount = 2;
     m_enemySpawner->fleeCfg.spawnCount = 0;
 
     enemyCount = m_enemySpawner->patrolCfg.spawnCount + m_enemySpawner->circleCfg.spawnCount + m_enemySpawner->turretCfg.spawnCount;
@@ -332,6 +332,15 @@ void GameScene::Init()
           {  62.5f, 90.0f,  125.0f },
           {-125.0f, 90.0f,  -62.5f },
           {-125.0f, 90.0f,   62.5f }});
+
+    m_enemySpawner->SetWaypoints(
+        { { 62.0f, 120.0f,    0.0f },
+          {  62.5f, 120.0f, -125.0f },
+          { 125.5f, 120.0f,  125.0f },
+          { -62.5f, 120.0f, -125.0f },
+          {-125.5f, 120.0f,  125.0f },
+          {  62.0f, 120.0f,  -62.5f },
+          {-125.0f, 120.0f,   62.5f } });
 
     m_enemySpawner->EnsurePatrolCount();
 	m_enemySpawner->turretCfg.target = m_player;

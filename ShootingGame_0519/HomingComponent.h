@@ -14,20 +14,19 @@ public:
     HomingComponent() = default;
     ~HomingComponent() override = default;
 
-    //--------Set/Get関数-------
+    //------------Set関数--------------
     void SetTarget(const std::weak_ptr<GameObject>& t) { m_target = t; }
-    std::weak_ptr<GameObject> GetTarget() const { return m_target; }
-
-    // timeToIntercept: 「あと何秒で命中させるか」。大きいほど緩やか。
     void SetTimeToIntercept(float t) { m_timeToIntercept = t; }
-    float GetTimeToIntercept() const { return m_timeToIntercept; }
-
-    // 加速度上限（0 なら無制限）
     void SetMaxAcceleration(float a) { m_maxAcceleration = a; }
-    float GetMaxAcceleration() const { return m_maxAcceleration; }
-
-    // ライフタイム（ホーミングを作った弾に適用する場合）
     void SetLifeTime(float sec) { m_lifeTime = sec; }
+    void SetAimBias(const Vector3& b) { m_aimBias = b; }
+    void SetAimBiasStrength(float s) { m_aimBiasStrength = s; }
+    void SetAimBiasDecay(float d) { m_aimBiasDecay = d; }
+
+    //------------Get関数--------------
+    std::weak_ptr<GameObject> GetTarget() const { return m_target; }
+    float GetTimeToIntercept() const { return m_timeToIntercept; }
+    float GetMaxAcceleration() const { return m_maxAcceleration; }
 
     //--------その他関数-------
     void Initialize() override;
@@ -43,5 +42,9 @@ private:
 
     Vector3 m_prevTargetPos = Vector3::Zero;
     bool m_havePrevTargetPos = false;
-    float m_maxTurnRateDeg = 60.0f;
+    float m_maxTurnRateDeg = 120.0f;
+
+    Vector3 m_aimBias = Vector3::Zero;      // 発射時のランダムバイアス（方向ベクトル）
+    float m_aimBiasStrength = 0.0f;         // バイアスの強さ（加算量のスカラー）
+    float m_aimBiasDecay = 1.0f;            // 1 秒あたりの減衰量（強さが 0 になるまで減る）
 };
