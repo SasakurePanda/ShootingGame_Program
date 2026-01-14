@@ -5,8 +5,9 @@
 #include "GameObject.h"
 #include "IScene.h"
 #include "Application.h"
-#include "HomingComponent.h" // 追加
+#include "HomingComponent.h"
 #include <iostream>
+#include <random>
 #include <DirectXMath.h>
 
 using namespace DirectX;
@@ -32,13 +33,14 @@ void ShootingComponent::FireHomingBullet(GameObject* owner, const std::shared_pt
         forward.Normalize();
     }
 
-    // 発射位置計算
+    //発射位置計算
     Vector3 muzzleLocal(0.0f, 0.0f, m_spawnOffset);
     Vector3 rot = owner->GetRotation();
     Matrix rotM = Matrix::CreateFromYawPitchRoll(rot.y, rot.x, rot.z);
     Vector3 spawnPos = owner->GetPosition() + Vector3::Transform(muzzleLocal, rotM);
 
     Vector3 toTarget = targetSp->GetPosition() - spawnPos;
+
     if (toTarget.LengthSquared() > 1e-6f)
     {
         toTarget.Normalize();
@@ -57,6 +59,7 @@ void ShootingComponent::FireHomingBullet(GameObject* owner, const std::shared_pt
             bc->SetVelocity(toTarget);        // ここで必ずターゲット方向をセット
             bc->SetSpeed(m_bulletSpeed);      // 必要ならホーミング用の速度にする
             bc->SetBulletType(BulletComponent::PLAYER);
+
         }
     }
 
@@ -67,7 +70,33 @@ void ShootingComponent::FireHomingBullet(GameObject* owner, const std::shared_pt
          homing->SetTimeToIntercept(1.0f);    
          homing->SetMaxAcceleration(2000.0f); 
          homing->SetLifeTime(5.0f);
+
+         // 乱数準備（static にしてコストを抑える）
+         static thread_local std::mt19937 s_rng((unsigned)std::random_device{}());
+         std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+
+         // 発射元のローカル軸（右・上）を取得（rotM を使って安定的に作る）
+         Vector3 right = Vector3::Transform(Vector3::UnitX, rotM);
+         Vector3 up = Vector3::Transform(Vector3::UnitY, rotM);
+
+         // ランダムベクトル：左右と上下方向に少しずつずらす（上下は控えめ）
+         Vector3 randVec = right * dist(s_rng) + up * (dist(s_rng) * 0.6f);
+
+         if (randVec.LengthSquared() < 1e-6f)
+         {
+             // フォールバック（稀にゼロになる対策）
+             randVec = Vector3::UnitZ;
+         }
+         randVec.Normalize();
+
+         float biasStrength = 0.25f; 
+         float biasDecay = 0.25f;     
+
+         homing->SetAimBias(randVec);
+         homing->SetAimBiasStrength(biasStrength);
+         homing->SetAimBiasDecay(biasDecay);
      }
+
     AddBulletToScene(bullet);
 
     m_timer = 0.0f;

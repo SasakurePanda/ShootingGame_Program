@@ -2,15 +2,17 @@
 #include "Component.h"
 #include "Input.h"
 #include "ICameraViewProvider.h"
+#include "IMovable.h"
 #include <SimpleMath.h>
 #include <algorithm>
 #include <functional>
 
 class PlayAreaComponent;
 
-class MoveComponent : public Component
+class MoveComponent : public Component, public IMovable
 {
 public:
+
     MoveComponent() = default;
     ~MoveComponent() override = default;
 
@@ -18,18 +20,23 @@ public:
     void Update(float dt) override;
     void Uninit() override;
 
-    //-----------------------------------Set関数関連------------------------------------
+    //-------------Set関数--------------
     void SetSpeed(float speed) { m_baseSpeed = speed; }
     void SetCameraView(ICameraViewProvider* camera) { m_camera = camera; }
     void SetPlayArea(PlayAreaComponent* playArea) { m_playArea = playArea; }
     void SetBoostKey(int vk) { m_boostKey = vk; }
+    void SetVelocity(const DirectX::SimpleMath::Vector3& velocity) override
+    {
+        m_velocity = velocity;
+        m_externalVelocity = DirectX::SimpleMath::Vector3::Zero;
+    }
 
-    //-----------------------------------Get関数関連------------------------------------
+    //-------------Get関数--------------
     bool GetBoostingState() const { return m_isBoosting; }
     DirectX::SimpleMath::Vector3 GetCurrentVelocity() const { return m_velocity + m_externalVelocity; }
-
     //ブースト量を取得する関数(演出で使用)
     float GetBoostIntensity() const;
+    DirectX::SimpleMath::Vector3 GetVelocity() const override { return m_velocity + m_externalVelocity; }
 
     //-----------------------------------その他関数関連------------------------------------
     void AddImpulse(const DirectX::SimpleMath::Vector3& impulse) { m_externalVelocity += impulse; }
