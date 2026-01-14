@@ -10,6 +10,8 @@ void GameObject::Initialize()
 
 void GameObject::Update(float dt)
 {
+    m_prevPosition = m_transform.pos;
+
     m_prevTransform = m_transform;
 
     for (auto& comp : m_components)

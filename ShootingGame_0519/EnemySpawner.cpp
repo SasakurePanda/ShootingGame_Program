@@ -70,6 +70,7 @@ std::shared_ptr<GameObject> EnemySpawner::SpawnPatrolEnemy(const PatrolConfig& c
     enemy->AddComponent(hp);
 
     auto push = std::make_shared<PushOutComponent>();
+    push->SetMass(5.0f);
     enemy -> AddComponent(push);
    
     //‰Šú‰»

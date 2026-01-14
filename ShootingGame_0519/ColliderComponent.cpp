@@ -14,4 +14,4 @@ void ColliderComponent::SetEnabled(bool enabled)
     {
         CollisionManager::UnregisterCollider(this);
     }
-}
+}   

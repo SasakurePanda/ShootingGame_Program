@@ -36,7 +36,7 @@ private:
     Vector3 m_Center = Vector3::Zero;      //回る時の中心点(ワールド座標)
     float m_Radius = 5.0f;                 //回る時の半径
     float m_Angle = 0.0f;                  //現在回っている時の角度
-    float m_AngularSpeed = 3.14 * 0.5f;    //一秒間で何度回転するか
+    float m_AngularSpeed = 3.14f * 0.5f;    //一秒間で何度回転するか
     bool m_Clockwise = true;               //回る方向 true なら 時計回り、 false なら反時計回り
     bool m_RotateToTangent = true;         
 };

@@ -9,7 +9,7 @@ void DebugPlayer::Initialize()
     //モデルコンポーネントの生成
     auto model = std::make_shared<ModelComponent>();
     //モデルの読み込み
-    model->LoadModel("Asset/Model/Robot/12211_Robot_l2.obj");
+    model->LoadModel("Asset/Model/Player/Fighterjet.obj");
     model->SetColor(Color(1, 0, 0, 1));
 
     AddComponent(move);

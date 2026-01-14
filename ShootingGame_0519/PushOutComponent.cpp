@@ -3,39 +3,17 @@
 
 using namespace DirectX::SimpleMath;
 
-void PushOutComponent::Initialize()
-{
-	//‰Šú‰»
-	m_isPush = false;
-	m_pushVector = Vector3::Zero;
-}
-
-void PushOutComponent::Update(float dt)
-{
-	if(!m_isPush){ return; }
-
-	GameObject* owner = GetOwner();
-	if (!owner) { return; }
-
-	Vector3 pos = owner->GetPosition();
-	pos += m_pushVector;
-	owner->SetPosition(pos);
-
-	//ƒŠƒZƒbƒg
-	m_isPush = false;
-	m_pushVector = Vector3::Zero;
-}
-
 void PushOutComponent::AddPush(const DirectX::SimpleMath::Vector3& push)
 {
-	if (push.LengthSquared() < 1e-8f){ return; }
-
-	m_pushVector += push;
+	m_accumulatedPush += push;
 	m_isPush = true;
 }
 
-void PushOutComponent::ClearPush()
+void PushOutComponent::ApplyPush()
 {
-	m_pushVector = Vector3::Zero;
-	m_isPush = false;
+	if (m_accumulatedPush.LengthSquared() > 1e-6f)
+	{
+		GetOwner()->SetPosition(GetOwner()->GetPosition() + m_accumulatedPush);
+	}
+	m_accumulatedPush = Vector3::Zero;
 }

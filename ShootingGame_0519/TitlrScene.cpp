@@ -33,7 +33,7 @@ void TitleScene::Init()
     m_TitleLogo = std::make_shared<GameObject>();
     auto LogoTexter = std::make_shared<TextureComponent>();
     LogoTexter->LoadTexture(L"Asset/UI/TitleLogo01.png");
-    LogoTexter->SetSize(614.4, 520.8);
+    LogoTexter->SetSize(614.4f, 520.8f);
     LogoTexter->SetScreenPosition(340, -30);
     m_TitleLogo->AddComponent(LogoTexter);
 

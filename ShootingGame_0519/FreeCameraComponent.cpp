@@ -39,7 +39,7 @@ Vector2 FreeCameraComponent::GetReticleScreen() const
 void FreeCameraComponent::Initialize()
 {
     UpdateProjectionIfNeeded();
-    m_Position = Vector3(0.0f, 0.0f, 60.0f);
+    m_Position = Vector3(0.0f, 0.0f, 0.0f);
     m_ViewMatrix = Matrix::CreateLookAt(
         m_Position,
         m_Position + Vector3::Forward,
@@ -104,10 +104,15 @@ void FreeCameraComponent::Update(float dt)
         Vector3::Up
     );
 
+
     Renderer::SetViewMatrix(m_ViewMatrix);
     Renderer::SetProjectionMatrix(m_ProjectionMatrix);
 
-    std::cout << "CamZ: " << m_Position.z << "\n";
+    //--------------向き確認ログ（デバッグ用）------------------
+    const Vector3 forward01 = GetForward();
+    /*std::cout << "CamPos(" << m_Position.x << "," << m_Position.y << "," << m_Position.z << ") "
+        << "Forward(" << forward01.x << "," << forward01.y << "," << forward01.z << ")\n";*/
+
 }
 
 

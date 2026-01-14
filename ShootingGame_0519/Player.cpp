@@ -32,6 +32,7 @@ void Player::Initialize()
     HPComp->SetInvincibilityOnHit(1.5f);
 
     auto push = std::make_shared<PushOutComponent>();
+    push->SetMass(2.0f);
 
     //コライダーコンポーネントの生成
     m_Collider = std::make_shared<OBBColliderComponent>();
