@@ -26,21 +26,23 @@ void PatrolComponent::Update(float dt)
 
 	GameObject* owner = GetOwner();
 
-	if (!m_useSpline)
+	if (!m_useSpline){ return; }
+
+	auto calcPoints = [&](Vector3& outP0, Vector3& outP1, Vector3& outP2, Vector3& outP3)
 	{
-		//Ç±Ç±ÇÕä˘ë∂ÇÃíºêiî≈ÇåƒÇ‘
-		return;
-	}
+			int i1 = static_cast<int>(m_currentIndex);
+			int i2 = i1 + 1;
+			int i0 = i1 - 1;
+			int i3 = i2 + 1;
 
-	int i1 = static_cast<int>(m_currentIndex);
-	int i2 = i1 + 1;
-	int i0 = i1 - 1;
-	int i3 = i2 + 1;
+			outP0 = GetPointClamped(i0);
+			outP1 = GetPointClamped(i1);
+			outP2 = GetPointClamped(i2);
+			outP3 = GetPointClamped(i3);
+	};
 
-	Vector3 p0 = GetPointClamped(i0);
-	Vector3 p1 = GetPointClamped(i1);
-	Vector3 p2 = GetPointClamped(i2);
-	Vector3 p3 = GetPointClamped(i3);
+	Vector3 p0, p1, p2, p3;
+	calcPoints(p0, p1, p2, p3);
 
 	Vector3 tangent = EvalCatmullRomTangentXZ(p0, p1, p2, p3, m_segmentT);
 	float tangentLen = tangent.Length();
@@ -55,30 +57,37 @@ void PatrolComponent::Update(float dt)
 	float deltaT = (m_speed * dt) / tangentLen;
 	m_segmentT += deltaT;
 
+	int safety = 0;
+	int count = static_cast<int>(m_waypoints.size());
+
 	//ãÊä‘ÇÇ‹ÇΩÇÆèàóù
-	while (m_segmentT >= 1.0f)
+	while (m_segmentT >= 1.10f)
 	{
 		m_segmentT -= 1.0f;
+
+		size_t prevIndex = m_currentIndex;
 		AdvanceSegment();
 
-		int count = static_cast<int>(m_waypoints.size());
-
-		int i1 = static_cast<int>(m_currentIndex);
-		int i2 = i1 + 1;
-
-		if (m_loop)
+		if (!m_loop)
 		{
-			i2 = (i2 % count);
+			if(m_currentIndex == prevIndex)
+			{
+				m_segmentT = 1.0f;
+				break;
+			}
 		}
 
-		int i0 = i1 - 1;
-		int i3 = i2 + 1;
+		safety++;
 
-		Vector3 p0 = GetPointClamped(i0);
-		Vector3 p1 = GetPointClamped(i1);
-		Vector3 p2 = GetPointClamped(i2);
-		Vector3 p3 = GetPointClamped(i3);
+		if (safety > count + 2)
+		{
+			// ñ≥å¿ÉãÅ[Évñhé~
+			m_segmentT = 0.0f;
+			break;
+		}
 	}
+
+	calcPoints(p0, p1, p2, p3);
 
 	Vector3 newPos = EvalCatmullRomXZ(p0, p1, p2, p3, m_segmentT);
 
@@ -95,6 +104,7 @@ void PatrolComponent::Update(float dt)
 		if (dir.LengthSquared() > 1e-6f)
 		{
 			dir.Normalize();
+
 			float yaw = std::atan2(dir.x, dir.z);
 
 			Vector3 rot = owner->GetRotation();
@@ -102,9 +112,6 @@ void PatrolComponent::Update(float dt)
 			owner->SetRotation(rot);
 		}
 	}
-
-	static float s_logTimer = 0.0f;
-	s_logTimer += dt;
 }
 
 /// <summary>

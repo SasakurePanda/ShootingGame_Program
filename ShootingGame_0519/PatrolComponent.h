@@ -1,5 +1,6 @@
 #pragma once
 #include "Component.h"
+#include "IMovable.h"
 #include <vector>
 #include <SimpleMath.h>
 #include <functional>
@@ -11,7 +12,7 @@ using namespace DirectX::SimpleMath;
 /// 今は補完などはないですが、補完スプラインで動かそうと
 /// 考えています。
 /// </summary>
-class PatrolComponent : public Component
+class PatrolComponent : public Component , public IMovable
 {
 public:
 	PatrolComponent() = default;
@@ -30,9 +31,25 @@ public:
 	void SetSplineTension(float tension) { m_splineTension = tension; }	//スプラインの滑らかさ
 	void SetLoop(bool loop) { m_loop = loop; }                    //ループするか（pingpongとの組合せに注意）
 	void SetPingPong(bool p) { m_pingPong = p; }
+
+	void SetVelocity(const DirectX::SimpleMath::Vector3& velocity) override
+	{
+		float lenSq = velocity.LengthSquared();
+		if (lenSq <= 1e-6f)
+		{
+			m_speed = 0.0f;
+			return;
+		}
+
+		m_speed = std::sqrt(lenSq);
+		m_currentDir = velocity;
+		m_currentDir.Normalize();
+	}
+
 	//-------------Get関数--------------
 	size_t GetCurrentIndex() const { return m_currentIndex; }				  //今向かっている地点のポイントのインデックスを取得
 	const std::vector<Vector3>& GetWaypoints() const { return m_waypoints; }  //設定しているウェイポイントの配列取得
+	DirectX::SimpleMath::Vector3 GetVelocity() const override { return m_currentDir * m_speed; }
 
 	//リセット
 	void Reset();
@@ -52,12 +69,12 @@ private:
 	bool m_useSpline = false;					//スプライン補完を使うかどうかのbool
 	float m_splineTension = 0.5f;				//スプラインの滑らかさ（0～1）
 
-	float m_segmentT = 0.0f;				//現在のセグメントの長さ
+	float m_segmentT = 0.0f;				    //現在のセグメントの長さ
 	float m_arrivalThreshold = 0.5f;
 
-	Vector3 m_currentDir = Vector3(0.0f,0.0f,1.0f);	// 現在の移動方向ベクトル
-	float m_turnRate = 6.0f;					// 曲がる速さ（値が大きいほど曲がりやすい）
-	float m_slowRadius = 2.0f;				// この範囲に入ったら減速開始
+	Vector3 m_currentDir = Vector3(0.0f,0.0f,1.0f);		//現在の移動方向ベクトル
+	float m_turnRate = 6.0f;		//曲がる速さ（値が大きいほど曲がりやすい）
+	float m_slowRadius = 2.0f;		//この範囲に入ったら減速開始
 
 	//-------------コールバック--------------
 	std::function<void(size_t)> m_onReached;

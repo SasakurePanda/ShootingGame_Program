@@ -8,6 +8,17 @@ IXAudio2SourceVoice* Sound::m_BgmVoice = nullptr;
 float Sound::m_BgmVolume = 0.7f;
 Sound::WavData Sound::m_BgmData;
 
+bool  Sound::m_IsFading = false;
+bool  Sound::m_FadeIn = true;
+float Sound::m_FadeTimer = 0.0f;
+float Sound::m_FadeDuration = 0.0f;
+float Sound::m_FadeStartVolume = 0.0f;
+float Sound::m_FadeTargetVolume = 0.0f;
+
+float Sound::m_SeVolume = 1.0f;
+std::unordered_map<std::wstring, Sound::WavData> Sound::m_SeCache;
+std::vector<Sound::SeVoiceEntry> Sound::m_SeVoices;
+
 static uint32_t ReadU32(std::ifstream& ifs)
 {
     uint32_t v = 0;
@@ -39,8 +50,68 @@ bool Sound::Init()
     return true;
 }
 
+void Sound::Update(float dt)
+{
+    // ---- BGMフェード（前に作ったやつ）----
+    if (m_IsFading)
+    {
+        if (dt > 0.0f && m_BgmVoice)
+        {
+            m_FadeTimer += dt;
+
+            float t = 1.0f;
+            if (m_FadeDuration > 0.0f)
+            {
+                t = std::clamp(m_FadeTimer / m_FadeDuration, 0.0f, 1.0f);
+            }
+
+            float volume = m_FadeStartVolume + (m_FadeTargetVolume - m_FadeStartVolume) * t;
+            SetBgmVolume(volume);
+
+            if (t >= 1.0f)
+            {
+                m_IsFading = false;
+                if (!m_FadeIn)
+                {
+                    StopBgm();
+                }
+            }
+        }
+        else
+        {
+            m_IsFading = false;
+        }
+    }
+
+    // ---- SEの後始末（再生完了Voiceを破棄）----
+    for (size_t i = 0; i < m_SeVoices.size();)
+    {
+        IXAudio2SourceVoice* v = m_SeVoices[i].voice;
+        if (!v)
+        {
+            m_SeVoices.erase(m_SeVoices.begin() + i);
+            continue;
+        }
+
+        XAUDIO2_VOICE_STATE st{};
+        v->GetState(&st);
+
+        if (st.BuffersQueued == 0)
+        {
+            v->Stop();
+            v->FlushSourceBuffers();
+            v->DestroyVoice();
+            m_SeVoices.erase(m_SeVoices.begin() + i);
+            continue;
+        }
+
+        ++i;
+    }
+}
+
 void Sound::Uninit()
 {
+    StopAllSe();
     StopBgm();
 
     if (m_MasterVoice)
@@ -51,6 +122,65 @@ void Sound::Uninit()
 
     m_XAudio2.Reset();
 }
+
+
+void Sound::FadeInBgm(float targetVolume, float durationSec)
+{
+    targetVolume = std::clamp(targetVolume, 0.0f, 1.0f);
+    durationSec = max(durationSec, 0.0f);
+
+    if (!m_BgmVoice)
+    {
+        return;
+    }
+
+    m_IsFading = true;
+    m_FadeIn = true;
+    m_FadeTimer = 0.0f;
+    m_FadeDuration = durationSec;
+
+    m_FadeStartVolume = 0.0f;
+    m_FadeTargetVolume = targetVolume;
+
+    SetBgmVolume(0.0f);
+}
+
+void Sound::FadeOutBgm(float durationSec)
+{
+    durationSec = max(durationSec, 0.0f);
+
+    if (!m_BgmVoice)
+    {
+        return;
+    }
+
+    m_IsFading = true;
+    m_FadeIn = false;
+    m_FadeTimer = 0.0f;
+    m_FadeDuration = durationSec;
+
+    m_FadeStartVolume = m_BgmVolume;
+    m_FadeTargetVolume = 0.0f;
+}
+
+const Sound::WavData* Sound::GetOrLoadSeWav(const std::wstring& filepath)
+{
+    auto it = m_SeCache.find(filepath);
+    if (it != m_SeCache.end())
+    {
+        return &it->second;
+    }
+
+    WavData wav{};
+    if (!LoadWavPcm(filepath, wav))
+    {
+        return nullptr;
+    }
+
+    auto res = m_SeCache.emplace(filepath, std::move(wav));
+    return &res.first->second;
+}
+
 
 bool Sound::LoadWavPcm(const std::wstring& filepath, WavData& outData)
 {
@@ -195,6 +325,57 @@ bool Sound::PlayBgmWav(const std::wstring& filepath, float volume)
     return true;
 }
 
+bool Sound::PlaySeWav(const std::wstring& filepath, float volume)
+{
+    if (!m_XAudio2)
+    {
+        return false;
+    }
+
+    const WavData* wav = GetOrLoadSeWav(filepath);
+    if (!wav)
+    {
+        return false;
+    }
+
+    IXAudio2SourceVoice* seVoice = nullptr;
+    HRESULT hr = m_XAudio2->CreateSourceVoice(&seVoice, &wav->format);
+    if (FAILED(hr) || !seVoice)
+    {
+        return false;
+    }
+
+    XAUDIO2_BUFFER buf{};
+    buf.AudioBytes = static_cast<UINT32>(wav->buffer.size());
+    buf.pAudioData = wav->buffer.data();
+    buf.Flags = XAUDIO2_END_OF_STREAM;
+
+    hr = seVoice->SubmitSourceBuffer(&buf);
+    if (FAILED(hr))
+    {
+        seVoice->DestroyVoice();
+        return false;
+    }
+
+    float finalVol = std::clamp(volume, 0.0f, 1.0f) * std::clamp(m_SeVolume, 0.0f, 1.0f);
+    seVoice->SetVolume(finalVol);
+
+    hr = seVoice->Start();
+    if (FAILED(hr))
+    {
+        seVoice->DestroyVoice();
+        return false;
+    }
+
+    SeVoiceEntry entry{};
+    entry.voice = seVoice;
+    entry.wav = wav;
+    m_SeVoices.push_back(entry);
+
+    return true;
+}
+
+
 void Sound::StopBgm()
 {
     if (m_BgmVoice)
@@ -220,4 +401,36 @@ void Sound::SetBgmVolume(float volume)
 float Sound::GetBgmVolume()
 {
     return m_BgmVolume;
+}
+
+void Sound::SetSeVolume(float volume)
+{
+    m_SeVolume = std::clamp(volume, 0.0f, 1.0f);
+}
+
+float Sound::GetSeVolume()
+{
+    return m_SeVolume;
+}
+
+void Sound::StopAllSe()
+{
+    for (auto& e : m_SeVoices)
+    {
+        if (e.voice)
+        {
+            e.voice->Stop();
+            e.voice->FlushSourceBuffers();
+            e.voice->DestroyVoice();
+            e.voice = nullptr;
+        }
+    }
+    m_SeVoices.clear();
+}
+
+void Sound::ClearSeCache()
+{
+    // 再生中のSEがあると参照が残るので止めてから消す
+    StopAllSe();
+    m_SeCache.clear();
 }
