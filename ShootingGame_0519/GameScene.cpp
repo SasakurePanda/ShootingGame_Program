@@ -14,6 +14,7 @@
 #include "FloorComponent.h"
 #include "PlayAreaComponent.h"
 #include "HitPointCompornent.h"
+#include "PushOutComponent.h"
 #include "DebugPlayer.h"
 
 void GameScene::DebugCollisionMode()
@@ -303,9 +304,9 @@ void GameScene::Init()
 
     //-------------------------敵生成--------------------------------
     m_enemySpawner = std::make_unique<EnemySpawner>(this);
-    m_enemySpawner->patrolCfg.spawnCount = 4;
+    m_enemySpawner->patrolCfg.spawnCount = 1;
 	m_enemySpawner->circleCfg.spawnCount = 0;
-    m_enemySpawner->turretCfg.spawnCount = 2;
+    m_enemySpawner->turretCfg.spawnCount = 0;
     m_enemySpawner->fleeCfg.spawnCount = 0;
 
     enemyCount = m_enemySpawner->patrolCfg.spawnCount + m_enemySpawner->circleCfg.spawnCount + m_enemySpawner->turretCfg.spawnCount;
@@ -375,7 +376,7 @@ void GameScene::Init()
     m_buildingSpawner = std::make_unique<BuildingSpawner>(this);
     BuildingConfig bc;
     bc.modelPath = "Asset/Build/wooden watch tower2.obj";
-    bc.count = 8;
+    bc.count = 1;
     bc.areaWidth = 300.0f;
     bc.areaDepth = 300.0f;
     bc.spacing = 30.0f;          //建物間に20単位の余裕を入れる
@@ -541,7 +542,7 @@ void GameScene::Update(float deltatime)
 
     if (m_playerMove)
     {
-        // ① ブーストの“強さ”を 0～1 で取得（MoveComponent 側で用意済み）
+        //ブーストの“強さ”を 0～1 で取得（MoveComponent 側で用意済み）
         float boostIntensity = m_playerMove->GetBoostIntensity(); // 0～1
 
         // ② ブラーの目標値（強すぎるなら 0.7f とかにしてもOK）
@@ -640,16 +641,12 @@ void GameScene::Update(float deltatime)
     //当たり判定チェック実行
     CollisionManager::CheckCollisions();
 
-    //-------------------------------------------------
-    // ★ 衝突で溜めた MTV を 1 回だけ適用する
-    //-------------------------------------------------
-    if (!m_playerMove && m_player)
+    for (auto& obj : m_GameObjects)
     {
-        m_playerMove = m_player->GetComponent<MoveComponent>();
-    }
-    if (m_playerMove)
-    {
-        m_playerMove->ApplyCollisionPush();
+        if (auto push = obj->GetComponent<PushOutComponent>())
+        {
+            push->Update(deltatime);
+        }
     }
 
     if (m_miniMap)
