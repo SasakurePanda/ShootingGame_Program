@@ -14,6 +14,10 @@
 
 void TitleScene::Init()
 {
+    /*PostProcessSettings p{};
+    p.motionBlurAmount = 0.0f;
+    Renderer::SetPostProcessSettings(p);*/
+
     auto cameraObj = std::make_shared<CameraObject>();
     auto freeCamComp = std::make_shared<FreeCameraComponent>();
 	cameraObj->AddComponent(freeCamComp);
@@ -21,8 +25,7 @@ void TitleScene::Init()
     m_Player = std::make_shared<GameObject>();
     m_Player->SetPosition(DirectX::SimpleMath::Vector3(0.0f, 0.0f, 40.0f));
     m_Player->SetScale(DirectX::SimpleMath::Vector3(1.5f, 1.5f, 1.5f));
-    //TestOJ->SetRotation(Vector3(0.0f, DirectX::XM_PI, 0.0f));
-    
+
     auto model = std::make_shared<ModelComponent>("Asset/Model/Player/Fighterjet.obj");
     model->SetColor(Color(1, 0, 0, 1));
     m_Player->AddComponent(model);
@@ -33,7 +36,6 @@ void TitleScene::Init()
     LogoTexter->SetSize(614.4, 520.8);
     LogoTexter->SetScreenPosition(340, -30);
     m_TitleLogo->AddComponent(LogoTexter);
-    
 
     m_TitleText = std::make_shared<GameObject>();
     auto TextTexter = std::make_shared<TextureComponent>();
@@ -42,50 +44,8 @@ void TitleScene::Init()
     TextTexter->SetScreenPosition(250, 370);
     m_TitleText->AddComponent(TextTexter);
 
-    //AddTextureObject(TitleLogo);
-    //AddTextureObject(TitleText);
-
     auto motion = std::make_shared<TitlePlayerMotionComponent>();
 
-    
-
-    //if (motion)
-    //{
-    //    m_PlayerPaths =
-    //    {
-    //        {
-    //            //Å‰‚Ì“®‚«
-    //            {-166.0f, 90.0f,-220.0f},
-    //            {-70.0f,  12.0f, -80.0f}, 
-    //            { 10.0f, -6.0f, -3.0f},
-    //            { 45.0f, -14.0f, 55.0f},
-    //            2.2f
-    //        },
-
-    //        {
-    //            {  28.0f,  16.0f, -130.0f },
-    //            {  18.0f,  12.0f,  -70.0f },
-    //            {   6.0f,   4.0f,  -15.0f },
-    //            { -22.0f, -10.0f,   30.0f },
-    //            2.0f
-    //        },
-
-    //        {
-    //            { -18.0f,  -6.0f, -110.0f },
-    //            { -10.0f,  -4.0f,  -55.0f },
-    //            {   2.0f,  -2.0f,  -10.0f },
-    //            {  14.0f,  -6.0f,   22.0f },
-    //            1.6f
-    //        }
-    //    };
-
-    //    motion->SetDuration(2.7f); 
-    //    motion->SetControlPoints(
-    //        Vector3(-166.0f, 90.0f,-220.0f),
-    //        Vector3(-70.0f,  12.0f, -80.0f),
-    //        Vector3( 10.0f, -6.0f, -3.0f),
-    //        Vector3( 45.0f, -14.0f, 55.0f));
-    //}
     m_Player->AddComponent(motion);
     
     m_TitleMotion = m_Player->GetComponent<TitlePlayerMotionComponent>();
@@ -200,8 +160,15 @@ void TitleScene::Update(float deltatime)
 
         if (Input::IsKeyDown(VK_RETURN))
         {
+            if (TransitionManager::IsTransitioning()){ return; }
+
             Sound::PlaySeWav(L"Asset/Sound/SE/TitleSelect01.wav", 0.5f);
-            SceneManager::SetCurrentScene("GameScene");
+            
+            TransitionManager::Start(3.0f,
+                []()
+                {
+                    SceneManager::SetCurrentScene("GameScene");
+                });
         }
     }
 }
@@ -369,14 +336,6 @@ void TitleScene::SetupPlayerPaths()
     c.p3 = DirectX::SimpleMath::Vector3( 18.0f, -6.0f, 30.0f);
     c.duration = 1.6f;
     m_PlayerPaths.push_back(c);
-
-    //BezierPath d;
-    //d.p0 = DirectX::SimpleMath::Vector3(  45.0f, -30.0f,   55.0f);
-    //d.p1 = DirectX::SimpleMath::Vector3(  12.0f, -25.0f,  -10.0f);
-    //d.p2 = DirectX::SimpleMath::Vector3( -50.0f,  -13.0f,  -70.0f);
-    //d.p3 = DirectX::SimpleMath::Vector3(-150.0f, 140.0f,  -140.0f);
-    //d.duration = 2.0f;
-    //m_PlayerPaths.push_back(d);
 
     m_CurrentPathIndex = 0;
 }

@@ -1,32 +1,41 @@
 #include "TransitionManager.h"
-#include "TransitionRenderer.h"
+#include "TextureManager.h"
 #include "SceneManager.h"
 #include "Renderer.h"         // DrawFullScreenQuad 等（下で使う）
+#include "Application.h"
 #include <cassert>
 #include <iostream>
+#include <algorithm>
+
+ID3D11ShaderResourceView* TransitionManager::m_TextureSRV;
+bool  TransitionManager::m_isTransitioning;
+float TransitionManager::m_fadeSpeed;
+TransitionType TransitionManager::m_type = TransitionType::FADE;
+float TransitionManager::m_timer;
+float TransitionManager::m_duration;    //
+float TransitionManager::m_elapsed;
+float TransitionManager::m_alpha;
+int   TransitionManager::m_phase;
+std::string TransitionManager::m_nextScene;
+std::function<void()> TransitionManager::m_preload;
+
 //--------------------------------------------------------
 //                      初期化関数
 //--------------------------------------------------------
 void TransitionManager::Init()
 {
-    TransitionRenderer::Init();
-}
+    m_TextureSRV = nullptr;
+    m_isTransitioning = false;
+    m_timer = 0.0f;
+    m_duration = 1.0f;
+    m_elapsed = 0.0f;
+    m_alpha = 0.0f;
+    m_phase = 0;
+    m_type = TransitionType::FADE;
+    m_nextScene.clear();
+	m_preload = nullptr;
 
-void TransitionManager::Uninit()
-{
-    TransitionRenderer::Shutdown();
-}
-
-void TransitionManager::Start(const std::string& nextScene, float duration, TransitionType type, std::function<void()> preload)
-{
-    if (duration <= 0.0f) duration = 1.0f;
-    m_IsActive = true;
-    m_Duration = duration;
-    m_Timer = 0.0f;
-    m_NextScene = nextScene;
-    m_Type = type;
-    m_Preload = preload;
-    m_HasSwitched = false;
+    m_TextureSRV = TextureManager::Load("Asset/Texture/Transition_Fade01.png");
 }
 
 //--------------------------------------------------------
@@ -34,61 +43,129 @@ void TransitionManager::Start(const std::string& nextScene, float duration, Tran
 //--------------------------------------------------------
 void TransitionManager::Update(float deltaTime)
 {
-    if (!m_IsActive) return;
+    if (!m_isTransitioning){ return; }
 
-    std::cout << "[TR] Update: active=" << m_IsActive
-        << " timer=" << m_Timer << "/" << m_Duration
-        /*<< " hasLoaded=" << m_HasLoaded*/ << std::endl;
-
-    m_Timer += deltaTime;
-    float half = m_Duration * 0.5f;
-
-    // 前半 (フェードアウト) が終わった段階でプリロード関数を呼び、
-    // その後即座にシーンを切替える（単純同期版）
-    if (!m_HasSwitched && m_Timer >= half)
+    //安全確保
+    if (deltaTime < 0.0f)
     {
-        if (m_Preload) {
-            // シンプル実装: 同期的に実行
-            m_Preload();
-        }
-        // シーン切替（同期的）
-        SceneManager::SetCurrentScene(m_NextScene);
-        m_HasSwitched = true;
+        deltaTime = 0.0f;
     }
 
-    if (m_Timer >= m_Duration)
+    m_elapsed += deltaTime;
+
+    float half = m_duration * 0.5f;
+
+    if (m_phase == 0)
     {
-        m_IsActive = false;
-        m_Timer = 0.0f;
-        m_Preload = nullptr;
+        if (half <= 0.0f)
+        {
+            m_alpha = 1.0f;
+            return;
+        }
+
+        float t = std::clamp(m_elapsed / half, 0.0f, 1.0f);
+        m_alpha = t;
+
+        if (m_elapsed >= half)
+        {
+            // フェーズ切り替え（ここでシーン切替等のコールバックを呼ぶ）
+            if (m_isTransitioning)
+            {
+                // ユーザが渡したコールバック（シーン読み込みやリソース差し替え等）
+                m_preload();
+            }
+
+            // 次フェーズのため経過時間を半分を超えた分だけ引く
+            m_elapsed -= half;
+            m_phase = 1;
+        }
+    }
+    else if (m_phase == 1)
+    {
+        // フェードイン（1 -> 0） : 経過 0..half
+        if (half <= 0.0f)
+        {
+            m_alpha = 0.0f;
+            // 終了
+            m_isTransitioning = false;
+            return;
+        }
+
+        float t = std::clamp(m_elapsed / half, 0.0f, 1.0f);
+        m_alpha = 1.0f - t;
+
+        if (m_elapsed >= half)
+        {
+            // トランジション終了
+            m_isTransitioning = false;
+            m_phase = 0;
+            m_elapsed = 0.0f;
+            m_alpha = 0.0f;
+            m_preload = nullptr;
+        }
     }
 }
+//--------------------------------------------------------
+//                     描画関数
+//--------------------------------------------------------
+void TransitionManager::Draw(float deltaTime)
+{
+    if (!m_isTransitioning){ return; }
 
+    if (!m_TextureSRV){ return; }
+
+    Vector2 topLeft;
+    topLeft.x = 0.0f;
+    topLeft.y = 0.0f;
+
+    Vector2 size;
+    size.x = static_cast<float>(Application::GetWidth());
+    size.y = static_cast<float>(Application::GetHeight());
+
+    //ブレンド／深度設定
+    Renderer::SetDepthEnable(false);
+    Renderer::SetBlendState(BS_ALPHABLEND);
+
+    //アルファ定数バッファに現在の値をセットしてバインド（Renderer に実装済みの SetTextureAlpha を使う）
+    Renderer::SetTextureAlpha(m_alpha);
+
+    //画像を描画
+    Renderer::DrawTexture(m_TextureSRV, topLeft, size);
+}
 
 //--------------------------------------------------------
 //                     描画関数
 //--------------------------------------------------------
-void TransitionManager::Draw(float /*deltaTime*/)
+void TransitionManager::Uninit()
 {
-    if (!m_IsActive) return;
-
-    float progress = m_Timer / m_Duration;
-    if (progress < 0.0f) progress = 0.0f;
-    if (progress > 1.0f) progress = 1.0f;
-
-    if (m_Type == TransitionType::FADE)
-    {
-        TransitionRenderer::DrawFade(progress);
-    }
-    else if (m_Type == TransitionType::IRIS)
-    {
-        TransitionRenderer::DrawIris(progress);
-    }
+    m_TextureSRV = nullptr;
+    m_isTransitioning = false;
+    m_preload = nullptr;
 }
 
-bool TransitionManager::IsActive()
+/// <summary>
+/// 画面遷移の開始時の設定関数
+/// </summary>
+/// <param name="duration"></param>
+/// <param name="onComplete"></param>
+void TransitionManager::Start(float duration, std::function<void()> onComplete)
 {
-    return m_IsActive;
+    if (duration <= 0.0f)
+    {
+        // 即時完了扱い
+        if (onComplete)
+        {
+            onComplete();
+        }
+        return;
+    }
+
+    m_duration = duration;
+    m_elapsed = 0.0f;
+    m_phase = 0;           // 0: fade-out, 1: fade-in
+    m_isTransitioning = true;
+    m_preload = onComplete;
+    m_alpha = 0.0f;        // 開始時は透明 -> フェードアウトで不透明へ
 }
 
 

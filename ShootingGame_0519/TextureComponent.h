@@ -27,7 +27,12 @@ public:
     //サイズのセット関数
     void SetSize(float width, float height) { m_Size = { width ,height }; }
 
-    // TextureComponent.h に追加
+    void SetVisible(bool isVisible) { m_IsVisible = isVisible; }
+
+	void SetAlpha(float alpha) { m_Alpha = alpha; }
+
+    //--------Get関数-------
+    bool GetVisible() const { return m_IsVisible; }
     ID3D11ShaderResourceView* GetSRV() const { return m_TextureSRV.Get(); }
 
 private:
@@ -39,4 +44,9 @@ private:
 
     //Textureのサイズの変数
     DirectX::SimpleMath::Vector2 m_Size;
+
+	float m_Alpha = 1.0f;
+
+    //--------------表示関連------------------
+    bool m_IsVisible = true;
 };

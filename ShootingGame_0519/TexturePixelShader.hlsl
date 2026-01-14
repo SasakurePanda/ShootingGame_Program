@@ -8,9 +8,15 @@ struct PS_INPUT
     float2 texcoord : TEXCOORD;
 };
 
+cbuffer TextureAlphaBuffer : register(b5)
+{
+    float Alpha;
+    float3 Padding; // 16バイト揃え
+}
+
 float4 PSMain(PS_INPUT input) : SV_TARGET
 {
     float4 col = tex0.Sample(samp0, input.texcoord);
-    // 標準的なアルファ合成（SRC_ALPHA, INV_SRC_ALPHA）を想定
+    col.a *= Alpha;
     return col;
 }

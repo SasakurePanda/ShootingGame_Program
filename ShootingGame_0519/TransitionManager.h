@@ -1,7 +1,11 @@
 #pragma once
 #include <string>
 #include <functional>
+#include <d3d11.h>
 
+/// <summary>
+/// 画面遷移演出のタイプ列挙型
+/// </summary>
 enum class TransitionType
 {
     FADE,
@@ -11,27 +15,32 @@ enum class TransitionType
 class TransitionManager
 {
 public:
-    static void Init(); // 必要なら呼ぶ（シェーダ初期化）
-    static void Uninit();
-
-    // nextScene: 切替先のシーン名（非同期ロードしない単純版では SetCurrentScene を呼ぶ）
-    // duration: 秒
-    // preload: 遷移中に実行したい（同期）処理。非同期実装は別途。
-    static void Start(const std::string& nextScene,
-        float duration,
-        TransitionType type = TransitionType::FADE,
-        std::function<void()> preload = nullptr);
-
+    static void Init(); 
     static void Update(float deltaTime);
     static void Draw(float deltaTime);
-    static bool IsActive();
+    static void Uninit();
+    
+    //--------Set関数-------
+    static void Start(float duration, std::function<void()> onComplete = nullptr);
+    static void SetFadeSpeed(float speed) { m_fadeSpeed = speed; }
+	static void SetType(TransitionType type) { m_type = type; }
+
+	//--------Get関数-------
+    static bool IsTransitioning() { return m_isTransitioning; }
 
 private:
-    static inline bool m_IsActive = false;
-    static inline float m_Duration = 1.0f;
-    static inline float m_Timer = 0.0f;
-    static inline std::string m_NextScene;
-    static inline TransitionType m_Type = TransitionType::FADE;
-    static inline std::function<void()> m_Preload = nullptr;
-    static inline bool m_HasSwitched = false; // 既にシーンを切替えたか
+    ///static void FinishTransitionPhase();
+
+    static ID3D11ShaderResourceView* m_TextureSRV;
+    static bool m_isTransitioning; 
+    static float m_duration; 
+    static float m_elapsed;
+    static float m_fadeSpeed;
+    static float m_alpha;
+    static int m_phase;
+    static TransitionType m_type;
+    static float m_timer;
+    static std::string m_nextScene;
+    static std::function<void()> m_preload;
+
 };

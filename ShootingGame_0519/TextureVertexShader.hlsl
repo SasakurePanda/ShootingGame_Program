@@ -27,10 +27,7 @@ struct VS_OUTPUT
 VS_OUTPUT VSMain(VS_INPUT input)
 {
     VS_OUTPUT o;
-    // 2D の場合、SetWorldViewProjection2D() で既に
-    // world/view/projection を正射影にしている前提です。
     float4 pos = float4(input.position, 1.0f);
-    // 乗算順はシステムに合わせてください（ここでは projection * view * world * pos）
     o.position = mul(pos, world);
     o.position = mul(o.position, view);
     o.position = mul(o.position, projection);
