@@ -400,7 +400,7 @@ void GameScene::Init()
         {   0.0f, -12.0f,    0.0f },
     };
 
-    int placed = m_buildingSpawner->Spawn(bc);
+    //int placed = m_buildingSpawner->Spawn(bc);
 
     //-------------------------レティクル作成-------------------------------------
     m_reticle = std::make_shared<Reticle>(L"Asset/UI/26692699.png", m_reticleW);
@@ -622,6 +622,8 @@ void GameScene::Update(float deltatime)
         if (obj) obj->Update(deltatime);
     }
 
+    
+
     //全オブジェクト Update を一回だけ実行（重要）
     for (auto& obj : m_TextureObjects)
     {
@@ -643,9 +645,12 @@ void GameScene::Update(float deltatime)
 
     for (auto& obj : m_GameObjects)
     {
-        if (auto push = obj->GetComponent<PushOutComponent>())
+        if (!obj) { continue; }
+
+        auto push = obj->GetComponent<PushOutComponent>();
+        if (push)
         {
-            push->Update(deltatime);
+            push->ApplyPush();
         }
     }
 

@@ -34,6 +34,10 @@ public:
     static void DebugDrawAllColliders(DebugRenderer& dr);
 
 private:
+
+    static void KillInwardVelocity(GameObject* obj,
+                            const DirectX::SimpleMath::Vector3& normal);
+
     //当たり判定を行いたいオブジェクトのリスト
     static std::vector<ColliderComponent*> m_Colliders;
     static bool m_hitThisFrame;

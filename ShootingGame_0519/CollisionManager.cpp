@@ -13,6 +13,7 @@
 #include "GameObject.h"
 #include "MoveComponent.h"
 #include "PushOutComponent.h"
+#include "IMovable.h"
 
 using namespace DirectX;
 using namespace DirectX::SimpleMath;
@@ -296,14 +297,37 @@ void CollisionManager::CheckCollisions()
             Vector3 finalPushA = mtv * (invA / sumInv);
             Vector3 finalPushB = -mtv * (invB / sumInv);
 
-            if (pushAComp) 
+            if (pushAComp)
             {
-                pushAComp->AddPush(finalPushA); 
+                pushAComp->AddPush(finalPushA);
             }
+            else
+            {
+                std::cout << "PushOutComponent missing on A\n";
+            }
+
             if (pushBComp)
             {
                 pushBComp->AddPush(finalPushB);
             }
+            else
+            {
+                std::cout << "PushOutComponent missing on B\n";
+            }
+
+
+            Vector3 normal = finalPushA;
+            if (normal.LengthSquared() > 1e-6f)
+            {
+                normal.Normalize();
+            }
+            else
+            {
+                normal = Vector3::Up;
+            }
+
+            KillInwardVelocity(ownerA, normal);
+            KillInwardVelocity(ownerB, -normal);
 
             colA->SetHitThisFrame(true);
             colB->SetHitThisFrame(true);
@@ -372,5 +396,26 @@ void CollisionManager::DebugDrawAllColliders(DebugRenderer& dr)
     // 元に戻す
     Renderer::SetDepthEnable(true);
     Renderer::DisableCulling(true);
+}
+
+
+void CollisionManager::KillInwardVelocity(GameObject* obj,
+                                          const DirectX::SimpleMath::Vector3& normal)
+{
+    if (!obj){ return; }
+
+    // IMovable を持つか確認
+    auto movable = obj->GetComponent<IMovable>();
+    if (!movable){ return; }
+
+    Vector3 velocity = movable->GetVelocity();
+    float dot = velocity.Dot(normal);
+
+    // 壁の内側へ向かう成分だけ消す
+    if (dot < 0.0f)
+    {
+        Vector3 corrected = velocity - normal * dot;
+        movable->SetVelocity(corrected);
+    }
 }
 
