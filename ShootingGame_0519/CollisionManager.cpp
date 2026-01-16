@@ -132,6 +132,18 @@ void CollisionManager::CheckCollisions()
 
                 hit = Collision::IsOBBHit(centerA, axesA, halfA, centerB, axesB, halfB);
             }
+            else if (typeA == ColliderType::SPHERE && typeB == ColliderType::OBB)
+            {
+                auto s = static_cast<SphereColliderComponent*>(colA);
+                auto o = static_cast<OBBColliderComponent*>(colB);
+                hit = Collision::IsSphereVsOBBHit(s, o);
+            }
+            else if (typeA == ColliderType::OBB && typeB == ColliderType::SPHERE)
+            {
+                auto o = static_cast<OBBColliderComponent*>(colA);
+                auto s = static_cast<SphereColliderComponent*>(colB);
+                hit = Collision::IsSphereVsOBBHit(s, o);
+            }
 
             //-----------------------------------------
             // 衝突判定 ： AABB vs OBB
@@ -157,6 +169,8 @@ void CollisionManager::CheckCollisions()
                     obb->GetCenter(), obb->GetRotationMatrix(),
                     obb->GetSize() * 0.5f);
             }
+
+
 
             //-----------------------------------------
             // 結果を送る(ログも出す)
@@ -234,6 +248,22 @@ void CollisionManager::CheckCollisions()
                                                 static_cast<OBBColliderComponent*>(colB),
                                                 pushA,
                                                 pushB);
+        }
+        else if (typeA == ColliderType::SPHERE && typeB == ColliderType::OBB)
+        {
+            resolved = Collision::ComputeSphereVsOBBMTV(
+                static_cast<SphereColliderComponent*>(colA),
+                static_cast<OBBColliderComponent*>(colB),
+                pushA,
+                pushB);
+        }
+        else if (typeA == ColliderType::OBB && typeB == ColliderType::SPHERE)
+        {
+            resolved = Collision::ComputeSphereVsOBBMTV(
+                static_cast<SphereColliderComponent*>(colB),
+                static_cast<OBBColliderComponent*>(colA),
+                pushB,
+                pushA);
         }
         else
         {

@@ -38,6 +38,7 @@ public:
 
     //位置・回転・大きさのセッター
     const Vector3& GetPosition() { return m_transform.pos; }
+    const Vector3& GetPrevPosition() const { return m_prevPosition; }
     const Vector3& GetRotation() { return m_transform.rot; }
     const Vector3& GetScale()    { return m_transform.scale;}
 
@@ -78,6 +79,6 @@ private:
     Vector3 m_localPosition; // 現在ある位置
     GameObject* m_parent = nullptr; // 親オブジェクト（親がいない場合は nullptr）]
     SRT m_prevTransform; // ← 補間用に追加
-
+    Vector3 m_prevPosition = Vector3::Zero;
     IScene* m_scene = nullptr;
 };

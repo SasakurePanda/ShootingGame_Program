@@ -15,7 +15,7 @@
 #include "PlayAreaComponent.h"
 #include "HitPointCompornent.h"
 #include "PushOutComponent.h"
-#include "DebugPlayer.h"
+#include "SphereColliderComponent.h"
 
 void GameScene::DebugCollisionMode()
 {
@@ -304,9 +304,9 @@ void GameScene::Init()
 
     //-------------------------敵生成--------------------------------
     m_enemySpawner = std::make_unique<EnemySpawner>(this);
-    m_enemySpawner->patrolCfg.spawnCount = 1;
+    m_enemySpawner->patrolCfg.spawnCount = 4;
 	m_enemySpawner->circleCfg.spawnCount = 0;
-    m_enemySpawner->turretCfg.spawnCount = 0;
+    m_enemySpawner->turretCfg.spawnCount = 2;
     m_enemySpawner->fleeCfg.spawnCount = 0;
 
     enemyCount = m_enemySpawner->patrolCfg.spawnCount + m_enemySpawner->circleCfg.spawnCount + m_enemySpawner->turretCfg.spawnCount;
@@ -376,7 +376,7 @@ void GameScene::Init()
     m_buildingSpawner = std::make_unique<BuildingSpawner>(this);
     BuildingConfig bc;
     bc.modelPath = "Asset/Build/wooden watch tower2.obj";
-    bc.count = 1;
+    bc.count = 8;
     bc.areaWidth = 300.0f;
     bc.areaDepth = 300.0f;
     bc.spacing = 30.0f;          //建物間に20単位の余裕を入れる
@@ -400,7 +400,7 @@ void GameScene::Init()
         {   0.0f, -12.0f,    0.0f },
     };
 
-    //int placed = m_buildingSpawner->Spawn(bc);
+    int placed = m_buildingSpawner->Spawn(bc);
 
     //-------------------------レティクル作成-------------------------------------
     m_reticle = std::make_shared<Reticle>(L"Asset/UI/26692699.png", m_reticleW);
@@ -721,18 +721,36 @@ void GameScene::DrawWorld(float deltatime)
             // 各オブジェクトのコライダーを登録
             for (auto& obj : m_GameObjects)
             {
-                if (!obj) continue;
+                if (!obj) { continue; }
                 auto col = obj->GetComponent<ColliderComponent>();
-                if (!col) continue;
+                if (!col) { continue; }
 
                 bool hit = col->IsHitThisFrame();
                 Vector4 color = hit ? Vector4(1, 0, 0, 1) : Vector4(0, 1, 0, 0.6f);
 
                 Vector3 center = col->GetCenter();
-                Vector3 size = col->GetSize();
-                Matrix  rot = col->GetRotationMatrix();
 
-                m_debugRenderer->AddBox(center, size, rot, color);
+                if (col->GetColliderType() == ColliderType::AABB)
+                {
+                    auto aabb = static_cast<AABBColliderComponent*>(col.get());
+                    Vector3 mn = aabb->GetMin();
+                    Vector3 mx = aabb->GetMax();
+                    Vector3 size = (mx - mn);              // フルサイズ
+                    m_debugRenderer->AddBox(center, size, Matrix::Identity, color);
+                }
+                else if (col->GetColliderType() == ColliderType::OBB)
+                {
+                    auto obb = static_cast<OBBColliderComponent*>(col.get());
+                    Vector3 size = obb->GetSize();         // フルサイズ
+                    Matrix rot = obb->GetRotationMatrix();
+                    m_debugRenderer->AddBox(center, size, rot, color);
+                }
+                else if (col->GetColliderType() == ColliderType::SPHERE)
+                {
+                    auto sphere = static_cast<SphereColliderComponent*>(col.get());
+                    float radius = sphere->GetRadius();
+                    m_debugRenderer->AddSphere(center, radius, color, 24);
+                }
             }
 
             // デバッグボックス描画

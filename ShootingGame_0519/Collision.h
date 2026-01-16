@@ -3,6 +3,7 @@
 #include <SimpleMath.h>
 #include "AABBColliderComponent.h"
 #include "OBBColliderComponent.h"
+#include "SphereColliderComponent.h"
 #include "CollisionHelpers.h" 
 
 using namespace DirectX::SimpleMath;
@@ -202,6 +203,28 @@ namespace Collision
         ExtractAxesFromMatrix(obbRot, axesB); // Ensure this function exists and normalizes
 
         return IsOBBHit(aabbCenter, axesA, aabbHalfSize, obbCenter, axesB, obbHalfSize);
+    }
+
+    inline bool IsSphereVsOBBHit(const SphereColliderComponent* sphere, const OBBColliderComponent* obb)
+    {
+        if (!sphere || !obb)
+        {
+            return false;
+        }
+
+        Vector3 c = sphere->GetCenter();
+        float r = sphere->GetRadius();
+
+        Vector3 obbCenter = obb->GetCenter();
+        Vector3 obbHalf = obb->GetSize() * 0.5f;
+
+        Vector3 axes[3];
+        ExtractAxesFromRotation(obb->GetRotationMatrix(), axes);
+
+        Vector3 p = ClosestPtPointOBB(c, obbCenter, axes, obbHalf);
+
+        Vector3 v = c - p;
+        return (v.LengthSquared() <= r * r);
     }
 
     

@@ -199,6 +199,7 @@
     <ClCompile Include="PushOutComponent.cpp" />
     <ClCompile Include="ResultLooseScene.cpp" />
     <ClCompile Include="Sound.cpp" />
+    <ClCompile Include="SphereColliderComponent.cpp" />
     <ClCompile Include="system\imgui\imgui.cpp" />
     <ClCompile Include="system\imgui\imgui_demo.cpp" />
     <ClCompile Include="system\imgui\imgui_draw.cpp" />
@@ -298,6 +299,7 @@
     <ClInclude Include="RaycastHit.h" />
     <ClInclude Include="ResultLooseScene.h" />
     <ClInclude Include="Sound.h" />
+    <ClInclude Include="SphereColliderComponent.h" />
     <ClInclude Include="system\imgui\imconfig.h" />
     <ClInclude Include="system\imgui\imgui.h" />
     <ClInclude Include="system\imgui\imgui_impl_dx11.h" />

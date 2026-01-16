@@ -3,6 +3,7 @@
 #include "OBBColliderComponent.h"
 #include "CollisionManager.h"
 #include "SphereComponent.h"
+#include "PushOutComponent.h"
 #include "Renderer.h" // optional: for debug draw
 #include <iostream>
 
@@ -26,6 +27,10 @@ void Bullet::Initialize()
     {
         m_collider->SetSize(Vector3(m_radius * 2.0f, m_radius * 2.0f, m_radius * 2.0f));
     }
+
+    auto push = std::make_shared<PushOutComponent>();
+    push->SetMass(5.0f);
+    AddComponent(push);
 
     ID3D11Device* dev = Renderer::GetDevice();
     m_primitive.CreateSphere(dev, m_radius, 16, 8); 

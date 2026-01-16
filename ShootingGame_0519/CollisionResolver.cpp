@@ -2,6 +2,7 @@
 #include "CollisionHelpers.h"
 #include "AABBColliderComponent.h"
 #include "OBBColliderComponent.h"
+#include "SphereColliderComponent.h"
 
 #include <algorithm>
 #include <cfloat>
@@ -128,9 +129,9 @@ namespace Collision
         using namespace DirectX::SimpleMath;
 
         // overlaps along each axis
-        float overlapX = min(aMax.x, bMax.x) - max(aMin.x, bMin.x);
-        float overlapY = min(aMax.y, bMax.y) - max(aMin.y, bMin.y);
-        float overlapZ = min(aMax.z, bMax.z) - max(aMin.z, bMin.z);
+        float overlapX = std::min(aMax.x, bMax.x) - std::max(aMin.x, bMin.x);
+        float overlapY = std::min(aMax.y, bMax.y) - std::max(aMin.y, bMin.y);
+        float overlapZ = std::min(aMax.z, bMax.z) - std::max(aMin.z, bMin.z);
 
         if (overlapX <= 0.0f || overlapY <= 0.0f || overlapZ <= 0.0f)
         {
@@ -465,9 +466,9 @@ namespace Collision
         //A----------
         //       ----  ←ここの量
         //      B-----------
-        float overlapX = min(aMax.x, bMax.x) - max(aMin.x, bMin.x);
-        float overlapY = min(aMax.y, bMax.y) - max(aMin.y, bMin.y);
-        float overlapZ = min(aMax.z, bMax.z) - max(aMin.z, bMin.z);
+        float overlapX = std::min(aMax.x, bMax.x) - std::max(aMin.x, bMin.x);
+        float overlapY = std::min(aMax.y, bMax.y) - std::max(aMin.y, bMin.y);
+        float overlapZ = std::min(aMax.z, bMax.z) - std::max(aMin.z, bMin.z);
 
         //重なりがない軸であれば何もしない
         if (overlapX <= 0.0f || overlapY <= 0.0f || overlapZ <= 0.0f)
@@ -761,6 +762,100 @@ namespace Collision
         return true;
     }
 
+    bool ComputeSphereVsOBBMTV(
+        const SphereColliderComponent* sphere,
+        const OBBColliderComponent* obb,
+        Vector3& outPushForSphere,
+        Vector3& outPushForObb)
+    {
+        if (!sphere || !obb)
+        {
+            return false;
+        }
 
+        Vector3 c = sphere->GetCenter();
+        float r = sphere->GetRadius();
+
+        Vector3 obbCenter = obb->GetCenter();
+        Vector3 obbHalf = obb->GetSize() * 0.5f;
+
+        Vector3 axes[3];
+        ExtractAxesFromRotation(obb->GetRotationMatrix(), axes);
+
+        Vector3 p = ClosestPtPointOBB(c, obbCenter, axes, obbHalf);
+        Vector3 v = c - p;
+        float distSq = v.LengthSquared();
+
+        // 外側から当たってる一般ケース
+        if (distSq > 1e-8f)
+        {
+            float dist = std::sqrt(distSq);
+            if (dist >= r)
+            {
+                return false;
+            }
+
+            Vector3 n = v / dist;                 // 押し出し方向
+            float penetration = (r - dist);       // めり込み量
+            Vector3 push = n * penetration;
+
+            outPushForSphere = push;
+            outPushForObb = -push;
+            return true;
+        }
+
+        // ここに来るのは「球中心がOBB内側」または「完全に面上」など
+        // -> 一番近い面方向へ押し出す（安定のため）
+        Vector3 d = c - obbCenter;
+
+        float localX = d.Dot(axes[0]);
+        float localY = d.Dot(axes[1]);
+        float localZ = d.Dot(axes[2]);
+
+        float dx = obbHalf.x - std::fabs(localX);
+        float dy = obbHalf.y - std::fabs(localY);
+        float dz = obbHalf.z - std::fabs(localZ);
+
+        // 最短で外に出る軸を選ぶ
+        float minDist = dx;
+        int axis = 0;
+
+        if (dy < minDist)
+        {
+            minDist = dy;
+            axis = 1;
+        }
+        if (dz < minDist)
+        {
+            minDist = dz;
+            axis = 2;
+        }
+
+        Vector3 n = axes[axis];
+        float sign = 1.0f;
+
+        if (axis == 0)
+        {
+            if (localX < 0.0f) { sign = -1.0f; }
+        }
+        else if (axis == 1)
+        {
+            if (localY < 0.0f) { sign = -1.0f; }
+        }
+        else
+        {
+            if (localZ < 0.0f) { sign = -1.0f; }
+        }
+
+        n *= sign;
+
+        // 「面までの距離(minDist) + 半径」だけ押し出すと外に出る
+        float penetration = (minDist + r);
+        Vector3 push = n * penetration;
+
+        outPushForSphere = push;
+        outPushForObb = -push;
+        return true;
+    }
 
 }

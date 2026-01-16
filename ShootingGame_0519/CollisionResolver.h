@@ -3,6 +3,7 @@
 
 class AABBColliderComponent;
 class OBBColliderComponent;
+class SphereColliderComponent;
 
 namespace Collision
 {
@@ -43,4 +44,10 @@ namespace Collision
         const OBBColliderComponent* b,
         DirectX::SimpleMath::Vector3& outPushForA,
         DirectX::SimpleMath::Vector3& outPushForB);
+
+    bool ComputeSphereVsOBBMTV(
+        const SphereColliderComponent* sphere,
+        const OBBColliderComponent* obb,
+        DirectX::SimpleMath::Vector3& outPushForSphere,
+        DirectX::SimpleMath::Vector3& outPushForObb);
 }

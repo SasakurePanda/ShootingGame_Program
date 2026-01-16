@@ -84,23 +84,6 @@ Vector2 MiniMapComponent::WorldToMiniMap(const Vector3& worldPos,
 	pixel.y = center.y - (norm.y * radiusPx);
 
 	return pixel;
-
-	/*//ミニマップ上の座標に変換
-	float normX = rel.x / radius;
-	float normY = rel.y / radius;
-
-	//枠外にいた場合にもし張り付いていた場合
-	normX = std::clamp(normX, -1.0f, 1.0f);
-	normY = std::clamp(normY, -1.0f, 1.0f);
-
-	float halfWidth  = m_size.x * 0.5f;
-	float halfHeight = m_size.y * 0.5f;
-
-	Vector2 pixel;
-	pixel.x = center.x + (normX * halfWidth);
-	pixel.y = center.y + (normY * halfHeight);
-
-	return pixel;*/
 }
 
 void MiniMapComponent::Draw(float alpha)
@@ -132,6 +115,21 @@ void MiniMapComponent::Draw(float alpha)
 		Renderer::DrawTexture(m_playerIconSRV, drawPos, iconSize);
 	}
 
+	//建物アイコン描画
+	if (m_buildingIconSRV)
+	{
+		for (GameObject* building : m_buildings)
+		{
+			if (!building) { continue; }
+
+			Vector3 bPos = building->GetPosition();
+			Vector2 bPixel = WorldToMiniMap(bPos, playerPos, playerYaw);
+
+			Vector2 drawPos = { bPixel.x - (iconSize.x * 0.5f), bPixel.y - (iconSize.y * 0.5f) };
+			Renderer::DrawTexture(m_buildingIconSRV, drawPos, iconSize);
+		}
+	}
+
 	//敵アイコン描画
 	if (m_enemyIconSRV)
 	{
@@ -144,21 +142,6 @@ void MiniMapComponent::Draw(float alpha)
 
 			Vector2 drawPos = { ePixel.x - (iconSize.x * 0.5f), ePixel.y - (iconSize.y * 0.5f) };
 			Renderer::DrawTexture(m_enemyIconSRV, drawPos, iconSize);
-		}
-	}
-
-	//建物アイコン描画
-	if (m_buildingIconSRV)
-	{
-		for(GameObject* building : m_buildings)
-		{
-			if (!building) { continue; }
-
-			Vector3 bPos = building->GetPosition();
-			Vector2 bPixel = WorldToMiniMap(bPos, playerPos, playerYaw);
-
-			Vector2 drawPos = { bPixel.x - (iconSize.x * 0.5f), bPixel.y - (iconSize.y * 0.5f) };
-			Renderer::DrawTexture(m_buildingIconSRV, drawPos, iconSize);
 		}
 	}
 }

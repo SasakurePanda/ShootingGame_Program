@@ -12,7 +12,7 @@ public:
 	void SetMass(float m) { m_mass = m; }
 
 	//-------------GetŠÖ”--------------
-	float GetMass() const { return m_mass; }
+	float GetMass() const { return m_mass; }//—é–Ø
 
 	//-----------‚»‚Ì‘¼ŠÖ”-------------
 	void AddPush(const DirectX::SimpleMath::Vector3& push);

@@ -9,6 +9,7 @@
 #include "EnemyAIComponent.h"
 #include "HitPointCompornent.h"
 #include "PushOutComponent.h"
+#include "SphereColliderComponent.h"
 
 EnemySpawner::EnemySpawner(GameScene* scene) : m_scene(scene)
 {
@@ -38,11 +39,6 @@ std::shared_ptr<GameObject> EnemySpawner::SpawnPatrolEnemy(const PatrolConfig& c
     model->LoadModel("Asset/Model/Enemy/EnemyFighterjet.obj");
     enemy->AddComponent(model);
 
-    //当たり判定の設定を行い、Componentを付ける
-    auto col = std::make_shared<OBBColliderComponent>();
-    col->SetSize({ 4.0f, 2.0f, 4.0f });
-    enemy->AddComponent(col);
-
     //PatrolEnemyの設定を行い、Componentを付ける
     auto patrol = std::make_shared<PatrolComponent>();
     if (!cfg.waypoints.empty())
@@ -69,9 +65,15 @@ std::shared_ptr<GameObject> EnemySpawner::SpawnPatrolEnemy(const PatrolConfig& c
     //コンポーネント追加(HP)
     enemy->AddComponent(hp);
 
+    //当たり判定の設定を行い、Componentを付ける
+    auto col = std::make_shared<SphereColliderComponent>();
+    col->SetRadius(7.5f);                       // 半径。サイズ感に合わせて調整
+    col->SetLocalOffset(Vector3(0.0f, 0.0f, 0.0f)); // 見た目中心が上ならオフセット
+    enemy->AddComponent(col);
+
     auto push = std::make_shared<PushOutComponent>();
     push->SetMass(5.0f);
-    enemy -> AddComponent(push);
+    enemy->AddComponent(push);
    
     //初期化
     enemy->Initialize();
@@ -155,6 +157,10 @@ std::shared_ptr<GameObject> EnemySpawner::SpawnTurretEnemy(const TurretConfig& c
 
     //コンポーネント追加(HP)
     enemy->AddComponent(hp);
+
+    auto push = std::make_shared<PushOutComponent>();
+    push->SetMass(15.0f);
+    enemy->AddComponent(push);
 
     m_scene->AddObject(enemy);
 
