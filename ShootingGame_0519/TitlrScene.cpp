@@ -6,21 +6,17 @@
 #include "TitleBackGround.h"
 #include "Input.h"
 #include "TransitionManager.h"
-#include "CameraObject.h"
 #include "FreeCameraComponent.h"
 #include "ModelComponent.h"
 #include "TextureComponent.h"
 #include "Sound.h"
+#include "EffectManager.h"
 
 void TitleScene::Init()
 {
-    /*PostProcessSettings p{};
-    p.motionBlurAmount = 0.0f;
-    Renderer::SetPostProcessSettings(p);*/
-
-    auto cameraObj = std::make_shared<CameraObject>();
+    m_camera = std::make_shared<CameraObject>();
     auto freeCamComp = std::make_shared<FreeCameraComponent>();
-	cameraObj->AddComponent(freeCamComp);
+    m_camera->AddComponent(freeCamComp);
 
     m_Player = std::make_shared<GameObject>();
     m_Player->SetPosition(DirectX::SimpleMath::Vector3(0.0f, 0.0f, 40.0f));
@@ -57,7 +53,7 @@ void TitleScene::Init()
 	m_SkyDome->Initialize();
 
 	AddObject(m_SkyDome);
-	AddObject(cameraObj);
+	AddObject(m_camera);
     //cameraObj->SetCameraComponent(freeCamComp);
     AddObject(m_Player);
 
@@ -181,6 +177,14 @@ void TitleScene::Draw(float dt)
 
 void TitleScene::DrawWorld(float deltatime)
 {
+    auto freecam = m_camera->GetComponent<FreeCameraComponent>();
+
+    if (freecam)
+    {
+        Renderer::SetViewMatrix(freecam->GetView());
+        Renderer::SetProjectionMatrix(freecam->GetProj());
+    }
+
     for (auto& obj : m_GameObjects)
     {
         if (!obj) { continue; }

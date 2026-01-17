@@ -16,6 +16,7 @@
 #include "HitPointCompornent.h"
 #include "PushOutComponent.h"
 #include "SphereColliderComponent.h"
+#include "EffectManager.h"
 
 void GameScene::DebugCollisionMode()
 {
@@ -304,9 +305,9 @@ void GameScene::Init()
 
     //-------------------------敵生成--------------------------------
     m_enemySpawner = std::make_unique<EnemySpawner>(this);
-    m_enemySpawner->patrolCfg.spawnCount = 4;
+    m_enemySpawner->patrolCfg.spawnCount = 1;
 	m_enemySpawner->circleCfg.spawnCount = 0;
-    m_enemySpawner->turretCfg.spawnCount = 2;
+    m_enemySpawner->turretCfg.spawnCount = 1;
     m_enemySpawner->fleeCfg.spawnCount = 0;
 
     enemyCount = m_enemySpawner->patrolCfg.spawnCount + m_enemySpawner->circleCfg.spawnCount + m_enemySpawner->turretCfg.spawnCount;
@@ -376,7 +377,7 @@ void GameScene::Init()
     m_buildingSpawner = std::make_unique<BuildingSpawner>(this);
     BuildingConfig bc;
     bc.modelPath = "Asset/Build/wooden watch tower2.obj";
-    bc.count = 8;
+    bc.count = 1;
     bc.areaWidth = 300.0f;
     bc.areaDepth = 300.0f;
     bc.spacing = 30.0f;          //建物間に20単位の余裕を入れる
@@ -692,16 +693,29 @@ void GameScene::Update(float deltatime)
         SceneManager::SetCurrentScene("ResultScene02");
     }
 
+    if (Input::IsKeyDown('P'))
+    {
+        //EffectManager::SpawnExplosion(m_player->GetPosition());
+    }
+
 }
 
 void GameScene::Draw(float dt)
 {
     DrawWorld(dt);
+    EffectManager::Draw3D(dt);
     DrawUI(dt);
 }
 
 void GameScene::DrawWorld(float deltatime)
 {
+    if (m_FollowCamera && m_FollowCamera->GetCameraComponent())
+    {
+        auto cam = m_FollowCamera->GetCameraComponent();
+        Renderer::SetViewMatrix(cam->GetView());
+        Renderer::SetProjectionMatrix(cam->GetProj());
+    }
+
     for (auto& obj : m_GameObjects)
     {
         if (!obj) { continue; }
@@ -767,7 +781,7 @@ void GameScene::DrawUI(float deltatime)
     for (auto& obj : m_TextureObjects)
     {
         if (!obj) { continue; }
-        if (std::dynamic_pointer_cast<Reticle>(obj)) continue; // HUD はあとで描く
+        if (std::dynamic_pointer_cast<Reticle>(obj)) { continue; } // HUD はあとで描く
         obj->Draw(deltatime);
     }
 

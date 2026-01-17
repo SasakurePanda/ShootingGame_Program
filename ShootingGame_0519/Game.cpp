@@ -6,6 +6,7 @@
 #include "Sound.h"
 #include "TransitionManager.h"
 #include "DebugUI.h"
+#include "EffectManager.h"
 
 void Game::GameInit()
 {
@@ -18,6 +19,8 @@ void Game::GameInit()
     Sound::Init();
 
     TransitionManager::Init();
+
+    EffectManager::Init();
 
     SceneManager::Init(); //シーンマネージャーの初期化
 
@@ -41,7 +44,10 @@ void Game::GameUpdate(float deltaTime)
 
     SceneManager::Update(deltaTime); //シーンマネージャーの終了処理 
 
+	EffectManager::Update(deltaTime);
+
     TransitionManager::Update(deltaTime);
+
 }
 
 void Game::GameDraw(float deltaTime)
@@ -50,8 +56,8 @@ void Game::GameDraw(float deltaTime)
     Renderer::Begin();
     //シーンマネージャーの描画処理
     SceneManager::Draw(deltaTime);
+    EffectManager::Draw3D(deltaTime);
     TransitionManager::Draw(deltaTime);
-
     //フレームの終了
     Renderer::End();
 }

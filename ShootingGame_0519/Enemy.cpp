@@ -2,6 +2,7 @@
 #include "Enemy.h"
 #include "Bullet.h"
 #include "HitPointCompornent.h"
+#include "EffectManager.h"
 
 void Enemy::Initialize()
 {
@@ -11,9 +12,9 @@ void Enemy::Initialize()
 void Enemy::Update(float dt)
 {
     auto hp = GetComponent<HitPointComponent>();
-    //std::cout << "敵のHP：" << hp->GetHP() << std::endl;
-
     GameObject::Update(dt);
+
+	std::cout << "Enemy Pos: " << GetPosition().x << ", " << GetPosition().y << ", " << GetPosition().z << "\n";
 }
 
 //衝突時の処理
@@ -39,6 +40,8 @@ void Enemy::OnCollision(GameObject* other)
 
             if (hp->GetHP() <= 0)
             {
+                OnDeath();
+
                 if (auto scene = GetScene())
                 {
                     scene->RemoveObject(this); // GameScene::RemoveObject(GameObject*) があるはず
@@ -51,14 +54,12 @@ void Enemy::OnCollision(GameObject* other)
 
 void Enemy::Damage(int amount)
 {
-    if (amount <= 0) return;
+    if (amount <= 0) { return; }
     m_hp -= amount;
 
     if (m_hp <= 0)
     {
-        // 呼び出し順：派生の OnDeath をまず呼ばせる（派生が特殊演出を行えるように）
         OnDeath();
-        // その後共通ハンドラ
         HandleDeathCommon();
     }
 }
@@ -74,14 +75,14 @@ void Enemy::Heal(int amount)
 
 void Enemy::OnDeath()
 {
-    // デフォルトは何もしない（派生でエフェクトや音、スコア加算を行う）
-    // 例（参考）: std::cout << "Enemy died\n";
+    EffectManager::SpawnExplosion(GetPosition());
 }
 
 void Enemy::HandleDeathCommon()
 {
-    // 共通の削除処理など（スコア付与やパーティクル生成の共通処理をここに書ける）
-    // ここでは単純にシーンから削除
+    //エフェクトを追加する
+    /*EffectManager::SpawnExplosion(GetPosition(), 8.0f);
+    RequestDestroy();*/
     RemoveSelfFromScene();
 }
 

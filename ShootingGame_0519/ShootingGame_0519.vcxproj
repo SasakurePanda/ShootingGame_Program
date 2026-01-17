@@ -159,6 +159,7 @@
   <ItemGroup>
     <ClCompile Include="AABBColliderComponent.cpp" />
     <ClCompile Include="Application.cpp" />
+    <ClCompile Include="BillboardEffectComponent.cpp" />
     <ClCompile Include="BoxComponent.cpp" />
     <ClCompile Include="Building.cpp" />
     <ClCompile Include="BuildingSpawner.cpp" />
@@ -179,6 +180,7 @@
     <ClCompile Include="DebugRenderer.cpp" />
     <ClCompile Include="DebugScene.cpp" />
     <ClCompile Include="DebugUI.cpp" />
+    <ClCompile Include="EffectManager.cpp" />
     <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="EnemyAIComponent.cpp" />
     <ClCompile Include="EnemyMoveComponent.cpp">
@@ -252,6 +254,7 @@
     <ClInclude Include="AABBColliderComponent.h" />
     <ClInclude Include="Application.h" />
     <ClInclude Include="BaseCamera.h" />
+    <ClInclude Include="BillboardEffectComponent.h" />
     <ClInclude Include="BoxComponent.h" />
     <ClInclude Include="Building.h" />
     <ClInclude Include="BuildingSpawner.h" />
@@ -276,6 +279,7 @@
     <ClInclude Include="DebugRenderer.h" />
     <ClInclude Include="DebugScene.h" />
     <ClInclude Include="DebugUI.h" />
+    <ClInclude Include="EffectManager.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="EnemyAIComponent.h" />
     <ClInclude Include="EnemyMoveComponent.h">
@@ -371,6 +375,16 @@
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">VSMain</EntryPointName>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VSMain</EntryPointName>
     </FxCompile>
+    <None Include="BillboardPixelShader.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PSMain</EntryPointName>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <FileType>Document</FileType>
+    </None>
+    <None Include="BillboardVertexShader.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">VSMain</EntryPointName>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <FileType>Document</FileType>
+    </None>
     <FxCompile Include="DebugLinePS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>

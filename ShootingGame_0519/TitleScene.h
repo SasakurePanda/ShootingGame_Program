@@ -4,6 +4,7 @@
 #include "IScene.h"
 #include "TitleBackGround.h"
 #include "TitlePlayerMotionComponent.h"
+#include "CameraObject.h"
 #include "SkyDome.h"
 
 //---------------------------------
@@ -37,6 +38,7 @@ private:
 	
 	std::shared_ptr<SkyDome> m_SkyDome;
 	std::shared_ptr<GameObject> m_Player;
+	std::shared_ptr<CameraObject> m_camera;
 
 	std::shared_ptr<GameObject> m_TitleLogo;	//タイトルロゴオブジェクト
 	std::shared_ptr<GameObject> m_TitleText;	//タイトルテキストオブジェクト
